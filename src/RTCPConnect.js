@@ -83,20 +83,23 @@ class RTCPConnect {
 
     this.offer.on('value', (dbData) => {
       // debugger;
-      if (this.offerIsUpdating) {
-        this.connection.setLocalDescription(new RTCSessionDescription(dbData.val()));
-      } else {
-        this.connection.setRemoteDescription(new RTCSessionDescription(dbData.val()));
+      if (!this.offerIsUpdating) {
+        let offer = new RTCSessionDescription(dbData.val());
+        this.connection.setRemoteDescription(offer);
+
+        this.connection.createAnswer(offer).then(
+          this.answerReady.bind(this),
+          this._onCreateSessionDescriptionError
+        )
       }
 
       this.offerIsUpdating = false;
     });
 
     this.answer.on('value', (dbData) => {
-      if (this.answerIsUpdating) {
-        this.connection.setRemoteDescription(new RTCSessionDescription(dbData.val()));
-      } else {
-        this.connection.setLocalDescription(new RTCSessionDescription(dbData.val()));
+      if (!this.answerIsUpdating) {
+        let answer = new RTCSessionDescription(dbData.val());
+        this.connection.setRemoteDescription(answer);
       }
 
       this.answerIsUpdating = false;
@@ -130,10 +133,17 @@ class RTCPConnect {
   }
 
   offerReady(offer) {
-    this.connection.setLocalDescription(offer);
+      this.connection.setLocalDescription(offer);
     trace('Offer from localConnection \n' + offer.sdp);
     this.offerIsUpdating = true;
     this.offer.update(offer.toJSON());
+  }
+
+  answerReady(answer) {
+    this.connection.setLocalDescription(answer);
+    // trace('Offer from localConnection \n' + offer.sdp);
+    this.answerIsUpdating = true;
+    this.answer.update(answer.toJSON());
   }
 
   _onCreateSessionDescriptionError(error) {

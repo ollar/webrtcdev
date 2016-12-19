@@ -43,19 +43,33 @@ const servers = {
 };
 
 class RTCPConnect {
-  constructor() {
-    var db = firebase.database();
-    this.connectionId = prompt('Set connection id');
+  constructor(connectionId) {
+    const db = firebase.database();
+
+    this.connectionId = connectionId;
     this.pcConstraint = null;
     this.dataConstraint = null;
 
     this.iceCandidateIsUpdating = false;
-    this.offerIsUpdating = true;
-    this.answerIsUpdating = true;
+    this.offerIsUpdating = false;
+    this.answerIsUpdating = false;
 
     this.iceCandidate = db.ref(`${this.connectionId}/iceCandidate`);
     this.offer = db.ref(`${this.connectionId}/offer`);
     this.answer = db.ref(`${this.connectionId}/answer`);
+
+    db.ref(this.connectionId).once('value').then((dbData) => {
+      console.log(dbData.exists());
+      if (dbData.exists()) {
+        // this.bindEvents();
+
+        this.waitForOffer();
+
+      } else {
+        this.createOffer();
+        this.waitForAnswer();
+      }
+    });
   }
 
   onSendChannelStateChange() {
@@ -67,27 +81,18 @@ class RTCPConnect {
     this.connection = new RTCPeerConnection(servers, this.pcConstraint);
     this.connection.onicecandidate = this.onIceCandidate.bind(this);
 
-    this.bindEvents();
-
     trace('Created local peer connection object localConnection');
     return this.connection;
   }
 
-  bindEvents() {
-    this.iceCandidate.on('value', (dbData) => {
-      if (!this.iceCandidateIsUpdating) {
-        this.connection.addIceCandidate(new RTCIceCandidate(dbData.val()));
-      }
-      this.iceCandidateIsUpdating = false;
-    });
-
+  waitForOffer() {
     this.offer.on('value', (dbData) => {
       // debugger;
-      if (!this.offerIsUpdating) {
+      if (dbData.val() && !this.offerIsUpdating) {
         let offer = new RTCSessionDescription(dbData.val());
         this.connection.setRemoteDescription(offer);
 
-        this.connection.createAnswer(offer).then(
+        this.connection.createAnswer().then(
           this.answerReady.bind(this),
           this._onCreateSessionDescriptionError
         )
@@ -96,8 +101,17 @@ class RTCPConnect {
       this.offerIsUpdating = false;
     });
 
+    this.iceCandidate.on('value', (dbData) => {
+      if (!this.iceCandidateIsUpdating) {
+        this.connection.addIceCandidate(new RTCIceCandidate(dbData.val()));
+      }
+      this.iceCandidateIsUpdating = false;
+    });
+  }
+
+  waitForAnswer() {
     this.answer.on('value', (dbData) => {
-      if (!this.answerIsUpdating) {
+      if (dbData.val() && !this.answerIsUpdating) {
         let answer = new RTCSessionDescription(dbData.val());
         this.connection.setRemoteDescription(answer);
       }
@@ -122,7 +136,17 @@ class RTCPConnect {
     this.sendChannel.onopen = this.onSendChannelStateChange;
     this.sendChannel.onclose = this.onSendChannelStateChange;
 
+    this.connection.ondatachannel = this.receiveChannelCallback;
+
     return this.sendChannel;
+  }
+
+  receiveChannelCallback(event) {
+    trace('Receive Channel Callback');
+    receiveChannel = event.channel;
+    receiveChannel.onmessage = (data) => console.log(data);
+    receiveChannel.onopen = this.onSendChannelStateChange;
+    receiveChannel.onclose = this.onSendChannelStateChange;
   }
 
   createOffer() {
@@ -148,6 +172,10 @@ class RTCPConnect {
 
   _onCreateSessionDescriptionError(error) {
     trace('Failed to create session description: ' + error.toString());
+  }
+
+  send(text) {
+    this.sendChannel.send(text);
   }
 }
 

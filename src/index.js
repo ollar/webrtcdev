@@ -2,16 +2,13 @@ const firebase = require('./firebaseConfig');
 const RTCPConnect = require('./RTCPConnect');
 const trace = require('./utils').trace;
 
-const localConnection = new RTCPConnect();
-localConnection.createConnection();
+const connectionId = prompt('Set connection id');
 
-localConnection.createChannel('transferDataChannel');
+const connection = new RTCPConnect(connectionId);
+connection.createConnection();
+connection.createChannel('transferDataChannel');
 
+const textarea = document.getElementById('data');
+const button = document.getElementById('send');
 
-
-
-
-localConnection.createOffer();
-
-console.log(localConnection);
-// console.log(localConnection.iceCandidate.toJSON());
+button.addEventListener('click', connection.send.bind(connection, textarea.value));

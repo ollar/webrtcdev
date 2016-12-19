@@ -6,7 +6,6 @@ const connectionId = prompt('Set connection id');
 
 const connection = new RTCPConnect(connectionId);
 connection.createConnection();
-connection.createChannel('transferDataChannel');
 
 const textarea = document.getElementById('data');
 const button = document.getElementById('send');

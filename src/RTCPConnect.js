@@ -59,13 +59,10 @@ class RTCPConnect {
     this.answer = db.ref(`${this.connectionId}/answer`);
 
     db.ref(this.connectionId).once('value').then((dbData) => {
-      console.log(dbData.exists());
       if (dbData.exists()) {
-        // this.bindEvents();
-
         this.waitForOffer();
-
       } else {
+        this.createChannel();
         this.createOffer();
         this.waitForAnswer();
       }
@@ -102,7 +99,7 @@ class RTCPConnect {
     });
 
     this.iceCandidate.on('value', (dbData) => {
-      if (!this.iceCandidateIsUpdating) {
+      if (dbData.val() && !this.iceCandidateIsUpdating) {
         this.connection.addIceCandidate(new RTCIceCandidate(dbData.val()));
       }
       this.iceCandidateIsUpdating = false;
@@ -128,10 +125,10 @@ class RTCPConnect {
     }
   }
 
-  createChannel(channelId) {
-    this.sendChannel = this.connection.createDataChannel(channelId,
+  createChannel() {
+    this.sendChannel = this.connection.createDataChannel(this.connectionId,
       this.dataConstraint);
-    trace(`Created send data channel with id: ${channelId}`);
+    trace(`Created send data channel with id: ${this.connectionId}`);
 
     this.sendChannel.onopen = this.onSendChannelStateChange;
     this.sendChannel.onclose = this.onSendChannelStateChange;

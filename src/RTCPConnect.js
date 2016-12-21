@@ -3,6 +3,8 @@ const firebase = require('./firebaseConfig');
 
 const trace = require('./utils').trace;
 
+const MyMessageEvent = require('./messageEvent');
+
 const servers = {
   iceServers: [
     {url:'stun:stun01.sipphone.com'},
@@ -164,7 +166,7 @@ class RTCPConnect {
 
   bindChannelEvents() {
     this.sendChannel.onmessage = (event) => {
-      const _event = new MessageEvent('message', event);
+      const _event = new MyMessageEvent('message', event, false);
       this.messageHistoryUpdate(_event);
     };
     this.sendChannel.onopen = this.onSendChannelStateChange.bind(this);
@@ -197,7 +199,7 @@ class RTCPConnect {
   }
 
   send(text) {
-    const event = new MessageEvent('message', { data: text });
+    const event = new MyMessageEvent('message', { data: text }, true);
     this.sendChannel.send(text);
     this.messageHistoryUpdate(event);
   }

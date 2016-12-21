@@ -6,26 +6,34 @@ const connectionId = prompt('Set connection id');
 
 const connection = new RTCPConnect(connectionId);
 
+const sendForm = document.getElementById('sendForm');
 const messagesList = document.getElementById('messagesList');
-const textarea = document.getElementById('data');
+const textinput = document.getElementById('data');
 const button = document.getElementById('send');
 
 document.addEventListener('message', (e) => {
   const message = document.createElement('li');
   message.innerHTML = e.data;
-  messagesList.appendChild(message);
 
-  textarea.value = '';
+  if (e.outgoing) {
+    textinput.value = '';
+    message.classList.add('outgoing');
+  }
+
+  return messagesList.appendChild(message);
 });
 
 document.addEventListener('channelOpen', (e) => {
-  textarea.removeAttribute('disabled');
+  textinput.removeAttribute('disabled');
   button.removeAttribute('disabled');
 });
 
 document.addEventListener('channelClosed', (e) => {
-  textarea.setAttribute('disabled', 'disabled');
+  textinput.setAttribute('disabled', 'disabled');
   button.setAttribute('disabled', 'disabled');
 });
 
-button.addEventListener('click', () => connection.send(textarea.value));
+sendForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  connection.send(textinput.value);
+});

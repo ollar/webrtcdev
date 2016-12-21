@@ -1,0 +1,52 @@
+html, body{
+  height: 100%;
+}
+
+.content{
+  margin: 0 auto;
+  max-width: 700px;
+  padding: 0 20px 20px;;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.messages-list{
+  flex-grow: 1;
+  margin: 20px 0;
+  padding: 0;
+  overflow: auto;
+}
+
+.messages-list li{
+  display: block;
+  padding: 5px 0;
+  color: deepskyblue;
+}
+
+.messages-list li.outgoing{
+  color: deeppink;
+}
+
+.pure-form{
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.send-form{
+  display: flex;
+  align-items: center;
+}
+
+.send-form .input{
+  flex-grow: 2;
+}
+
+.send-form .input input{
+  width: 100%;
+  display: block;
+}
+
+.send-form .button{
+  flex-grow: 0;
+}

@@ -1,0 +1,9 @@
+web:
+  build: .
+  dockerfile: nginxDockerfile
+
+  volumes:
+    - ./public/:/app/
+  ports:
+    - "8899:80"
+  mem_limit: 8m

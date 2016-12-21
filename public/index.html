@@ -7,9 +7,11 @@
     <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.1/build/pure-min.css">
   </head>
   <body>
-
-    <textarea id="data" rows="20" cols="20"></textarea>
-    <button id="send">Send</button>
+    <ul id="messagesList"></ul>
+    <textarea id="data" rows="20" cols="80" disabled></textarea>
+    <div class="pure-controls">
+      <button id="send" disabled class="pure-button pure-button-primary">Send</button>
+    </div>
     <script type="text/javascript" src="./bundle.js"></script>
   </body>
 </html>

@@ -3,7 +3,7 @@ const firebase = require('./firebaseConfig');
 
 const trace = require('./utils').trace;
 
-const MyMessageEvent = require('./messageEvent');
+const Sync = require('./sync');
 
 const servers = {
   iceServers: [
@@ -64,6 +64,8 @@ class RTCPConnect {
     this.offer = db.ref(`${this.connectionId}/offer`);
     this.answer = db.ref(`${this.connectionId}/answer`);
 
+    Sync.on('sendMessage', this.send, this);
+
     db.ref(this.connectionId).once('value').then((dbData) => {
       if (dbData.exists()) {
         this.type = 'answer';
@@ -87,9 +89,9 @@ class RTCPConnect {
     trace('Send channel state is: ' + this.sendChannel.readyState);
 
     if (this.sendChannel.readyState === 'open') {
-      document.dispatchEvent(new Event('channelOpen'));
+      Sync.trigger('channelOpen');
     } else if (this.sendChannel.readyState === 'closed') {
-      document.dispatchEvent(new Event('channelClosed'));
+      Sync.trigger('channelClosed');
       firebase.database().ref(this.connectionId).remove();
     }
   }
@@ -166,8 +168,10 @@ class RTCPConnect {
 
   bindChannelEvents() {
     this.sendChannel.onmessage = (event) => {
-      const _event = new MyMessageEvent('message', event, false);
-      this.messageHistoryUpdate(_event);
+      this.messageHistoryUpdate({
+        data: event.data,
+        outgoing: false,
+      });
     };
     this.sendChannel.onopen = this.onSendChannelStateChange.bind(this);
     this.sendChannel.onclose = this.onSendChannelStateChange.bind(this);
@@ -199,13 +203,15 @@ class RTCPConnect {
   }
 
   send(text) {
-    const event = new MyMessageEvent('message', { data: text }, true);
     this.sendChannel.send(text);
-    this.messageHistoryUpdate(event);
+    this.messageHistoryUpdate({
+      data: text,
+      outgoing: true,
+    });
   }
 
-  messageHistoryUpdate(event) {
-    document.dispatchEvent(event);
+  messageHistoryUpdate(data) {
+    Sync.trigger('message', data);
   }
 }
 

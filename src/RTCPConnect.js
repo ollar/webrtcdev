@@ -3,10 +3,10 @@ const firebase = require('./firebaseConfig');
 
 const trace = require('./utils').trace;
 
-// const servers = {
-//   iceServers: [
-//     {url:'stun:stun01.sipphone.com'},
-//     {url:'stun:stun.ekiga.net'},
+const servers = {
+  iceServers: [
+    {url:'stun:stun01.sipphone.com'},
+    // {url:'stun:stun.ekiga.net'},
 //     {url:'stun:stun.fwdnet.net'},
 //     {url:'stun:stun.ideasip.com'},
 //     {url:'stun:stun.iptel.org'},
@@ -39,14 +39,16 @@ const trace = require('./utils').trace;
 //     	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
 //     	username: '28224511:1379330808'
 //     },
-//   ]
-// };
+  ]
+};
 
-const servers = null;
+// const servers = null;
 
 class RTCPConnect {
   constructor(connectionId) {
     const db = firebase.database();
+
+    this.type = 'offer';
 
     this.connectionId = connectionId;
     this.pcConstraint = null;
@@ -61,6 +63,14 @@ class RTCPConnect {
     this.answer = db.ref(`${this.connectionId}/answer`);
 
     db.ref(this.connectionId).once('value').then((dbData) => {
+      if (dbData.exists()) {
+        this.type = 'answer';
+      } else {
+        this.type = 'offer';
+      }
+
+      this.createConnection();
+
       if (dbData.exists()) {
         this.waitForOffer();
       } else {
@@ -80,12 +90,12 @@ class RTCPConnect {
       document.dispatchEvent(new Event('channelClosed'));
       firebase.database().ref(this.connectionId).remove();
     }
-
   }
 
   createConnection() {
     trace('Using SCTP based data channels');
-    this.connection = new RTCPeerConnection(servers, this.pcConstraint);
+    trace('Connection type is ' + this.type);
+    this.connection = new RTCPeerConnection(this.type === 'offer' ? servers : null, this.pcConstraint);
     this.connection.onicecandidate = this.onIceCandidate.bind(this);
 
     trace('Created local peer connection object localConnection');

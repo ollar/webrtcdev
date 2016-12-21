@@ -5,7 +5,6 @@ const trace = require('./utils').trace;
 const connectionId = prompt('Set connection id');
 
 const connection = new RTCPConnect(connectionId);
-connection.createConnection();
 
 const messagesList = document.getElementById('messagesList');
 const textarea = document.getElementById('data');

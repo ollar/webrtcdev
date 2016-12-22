@@ -2,6 +2,7 @@ const adapter = require('webrtc-adapter');
 const firebase = require('./firebaseConfig');
 
 const trace = require('./utils').trace;
+const uuid = require('./utils').uuid;
 
 const Sync = require('./sync');
 
@@ -50,7 +51,14 @@ class RTCPConnect {
   constructor(connectionId) {
     const db = firebase.database();
 
-    this.type = 'offer';
+    this.uid = uuid();
+
+    this.peers = {
+      [this.uid]: {
+        connection: null,
+        channel: null,
+      }
+    };
 
     this.connectionId = connectionId;
     this.pcConstraint = null;
@@ -60,29 +68,49 @@ class RTCPConnect {
     this.offerIsUpdating = false;
     this.answerIsUpdating = false;
 
-    this.iceCandidate = db.ref(`${this.connectionId}/iceCandidate`);
-    this.offer = db.ref(`${this.connectionId}/offer`);
-    this.answer = db.ref(`${this.connectionId}/answer`);
+    this.iceCandidate = db.ref(`${this.connectionId}/${this.uid}/iceCandidate`);
+    this.offer = db.ref(`${this.connectionId}/${this.uid}/offer`);
+    this.answer = db.ref(`${this.connectionId}/${this.uid}/answer`);
 
     Sync.on('sendMessage', this.send, this);
+    Sync.on('channelClose', (connectionId) => {
+      trace(`Channel close ${this.uid}`);
+      db.ref(`${this.connectionId}/${this.uid}`).remove();
+    });
 
     db.ref(this.connectionId).once('value').then((dbData) => {
-      if (dbData.exists()) {
-        this.type = 'answer';
+      if (dbData.numChildren()) {
+        console.log('has users');
       } else {
-        this.type = 'offer';
-      }
-
-      this.createConnection();
-
-      if (dbData.exists()) {
-        this.waitForOffer();
-      } else {
-        this.createChannel();
+        console.log('no users');
+        this.createConnection();
         this.createOffer();
-        this.waitForAnswer();
       }
     });
+
+    db.ref(this.connectionId).on('child_added', (dbData) => {
+      console.log(dbData.key, this.uid);
+      console.log(dbData.val());
+    });
+
+
+    // db.ref(this.connectionId).once('value').then((dbData) => {
+    //   if (dbData.exists()) {
+    //     this.type = 'answer';
+    //   } else {
+    //     this.type = 'offer';
+    //   }
+    //
+    //   this.createConnection();
+    //
+    //   if (dbData.exists()) {
+    //     this.waitForOffer();
+    //   } else {
+    //     this.createChannel();
+    //     this.createOffer();
+    //     this.waitForAnswer();
+    //   }
+    // });
   }
 
   onSendChannelStateChange() {
@@ -92,18 +120,19 @@ class RTCPConnect {
       Sync.trigger('channelOpen');
     } else if (this.sendChannel.readyState === 'closed') {
       Sync.trigger('channelClosed');
-      firebase.database().ref(this.connectionId).remove();
+      firebase.database().ref(`${this.connectionId}/${this.uid}`).remove();
     }
   }
 
   createConnection() {
     trace('Using SCTP based data channels');
-    trace('Connection type is ' + this.type);
-    this.connection = new RTCPeerConnection(this.type === 'offer' ? servers : null, this.pcConstraint);
-    this.connection.onicecandidate = this.onIceCandidate.bind(this);
+    const connection = new RTCPeerConnection(servers, this.pcConstraint);
+    connection.onicecandidate = this.onIceCandidate.bind(this);
+
+    this.peers[this.uid].connection = connection;
 
     trace('Created local peer connection object localConnection');
-    return this.connection;
+    return connection;
   }
 
   waitForOffer() {
@@ -145,56 +174,63 @@ class RTCPConnect {
   onIceCandidate(event) {
     trace('local ice callback');
     if (event.candidate) {
-      this.iceCandidateIsUpdating = true;
-      this.iceCandidate.update(event.candidate.toJSON());
+      const ice = this.iceCandidate.push();
+      ice.set(event.candidate.toJSON());
     }
   }
 
   createChannel() {
-    this.sendChannel = this.connection.createDataChannel(this.connectionId,
+    const connection = this.peers[this.uid].connection;
+    const channel = connection.createDataChannel(this.connectionId,
       this.dataConstraint);
     trace(`Created send data channel with id: ${this.connectionId}`);
 
-    this.bindChannelEvents();
+    this.peers[this.uid].channel = channel;
 
-    return this.sendChannel;
+    this.bindChannelEvents(channel);
+
+    return channel;
   }
 
   receiveChannelCallback(event) {
+    const channel = this.peers[this.uid].channel;
+
     trace('Receive Channel Callback');
-    this.sendChannel = event.channel;
-    this.bindChannelEvents();
+    channel = event.channel;
+    this.bindChannelEvents(channel);
   }
 
-  bindChannelEvents() {
-    this.sendChannel.onmessage = (event) => {
+  bindChannelEvents(channel) {
+    channel.onmessage = (event) => {
       this.messageHistoryUpdate({
         data: event.data,
         outgoing: false,
       });
     };
-    this.sendChannel.onopen = this.onSendChannelStateChange.bind(this);
-    this.sendChannel.onclose = this.onSendChannelStateChange.bind(this);
+    channel.onopen = this.onSendChannelStateChange.bind(this);
+    channel.onclose = this.onSendChannelStateChange.bind(this);
   }
 
   createOffer() {
-    this.connection.createOffer().then(
+    const connection = this.peers[this.uid].connection;
+
+    connection.createOffer().then(
       this.offerReady.bind(this),
       this._onCreateSessionDescriptionError
     );
   }
 
   offerReady(offer) {
-      this.connection.setLocalDescription(offer);
+    const connection = this.peers[this.uid].connection;
+    connection.setLocalDescription(offer);
     trace('Offer from localConnection \n' + offer.sdp);
-    this.offerIsUpdating = true;
     this.offer.update(offer.toJSON());
   }
 
   answerReady(answer) {
-    this.connection.setLocalDescription(answer);
+    const connection = this.peers[this.uid].connection;
+    connection.setLocalDescription(answer);
     trace('Answer from connection \n' + answer.sdp);
-    this.answerIsUpdating = true;
     this.answer.update(answer.toJSON());
   }
 

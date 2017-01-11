@@ -19,6 +19,14 @@ const Router = Backbone.Router.extend({
       el: '#app',
       connectionId: connectionId,
     });
+
+    window.onunload = function() {
+      const db = firebase.database();
+
+      db.ref(`${connection.connectionId}/${connection.uid}`).remove();
+
+      return false;
+    };
   },
 });
 

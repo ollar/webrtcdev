@@ -6,10 +6,10 @@ const uuid = require('./utils').uuid;
 
 const Sync = require('./sync');
 
-const servers = {
-  iceServers: [
-    {url:'stun:stun01.sipphone.com'},
-    // {url:'stun:stun.ekiga.net'},
+// const servers = {
+//   iceServers: [
+//     {url:'stun:stun01.sipphone.com'},
+//     {url:'stun:stun.ekiga.net'},
 //     {url:'stun:stun.fwdnet.net'},
 //     {url:'stun:stun.ideasip.com'},
 //     {url:'stun:stun.iptel.org'},
@@ -42,10 +42,10 @@ const servers = {
 //     	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
 //     	username: '28224511:1379330808'
 //     },
-  ]
-};
+//   ]
+// };
 
-// const servers = null;
+const servers = null;
 
 class RTCPConnect {
   constructor(connectionId) {
@@ -83,14 +83,25 @@ class RTCPConnect {
         console.log('has users');
       } else {
         console.log('no users');
-        this.createConnection();
-        this.createOffer();
+        // need to create a stub like we are bosses here
+        db.ref(`${this.connectionId}`)
+          .child(this.uid)
+          .set({
+            'owner': true
+          });
       }
     });
 
     db.ref(this.connectionId).on('child_added', (dbData) => {
       console.log(dbData.key, this.uid);
       console.log(dbData.val());
+
+      if (dbData.key !== this.uid) {
+
+      }
+
+      // this.createConnection();
+      // this.createOffer();
     });
 
 
@@ -130,6 +141,7 @@ class RTCPConnect {
     connection.onicecandidate = this.onIceCandidate.bind(this);
 
     this.peers[this.uid].connection = connection;
+    console.log(this.peers);
 
     trace('Created local peer connection object localConnection');
     return connection;

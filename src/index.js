@@ -1,7 +1,7 @@
-const firebase = require('./firebaseConfig');
 const RTCPConnect = require('./RTCPConnect');
 const uuid = require('./utils').uuid;
 const MainView = require('./views/main');
+const Sync = require('./sync');
 
 const Router = Backbone.Router.extend({
   routes: {
@@ -21,11 +21,8 @@ const Router = Backbone.Router.extend({
     });
 
     window.onunload = function() {
-      const db = firebase.database();
-
-      db.ref(`${connection.connectionId}/${connection.uid}`).remove();
-
-      return false;
+      Sync.trigger('channelClose', connection.uid);
+      return null;
     };
   },
 });

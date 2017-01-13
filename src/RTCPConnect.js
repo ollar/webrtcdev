@@ -53,75 +53,47 @@ class RTCPConnect {
 
     this.uid = uuid();
 
-    this.peers = {
-      [this.uid]: {
-        connection: null,
-        channel: null,
-      }
-    };
+    this.peers = {};
 
     this.connectionId = connectionId;
     this.pcConstraint = null;
     this.dataConstraint = null;
 
-    this.iceCandidateIsUpdating = false;
-    this.offerIsUpdating = false;
-    this.answerIsUpdating = false;
-
-    this.iceCandidate = db.ref(`${this.connectionId}/${this.uid}/iceCandidate`);
-    this.offer = db.ref(`${this.connectionId}/${this.uid}/offer`);
-    this.answer = db.ref(`${this.connectionId}/${this.uid}/answer`);
+    this.iceCandidate = (uid) => db.ref(`${this.connectionId}/${uid}/iceCandidate`);
+    this.offer = (uid) => db.ref(`${this.connectionId}/${uid}/offer`);
+    this.answer = (uid) => db.ref(`${this.connectionId}/${uid}/answer`);
 
     Sync.on('sendMessage', this.send, this);
-    Sync.on('channelClose', (connectionId) => {
-      trace(`Channel close ${this.uid}`);
-      db.ref(`${this.connectionId}/${this.uid}`).remove();
+    Sync.on('channelClose', (uid) => {
+      trace(`Channel close ${uid}`);
+      db.ref(`${this.connectionId}/${uid}`).remove();
     });
 
-    db.ref(this.connectionId).once('value').then((dbData) => {
-      if (dbData.numChildren()) {
-        console.log('has users');
-      } else {
-        console.log('no users');
-        // need to create a stub like we are bosses here
-        db.ref(`${this.connectionId}`)
-          .child(this.uid)
-          .set({
-            'owner': true
-          });
-      }
-    });
+    this.enterRoom();
 
     db.ref(this.connectionId).on('child_added', (dbData) => {
-      console.log(dbData.key, this.uid);
-      console.log(dbData.val());
+      const uid = dbData.val().uid;
 
-      if (dbData.key !== this.uid) {
-
+      if (uid) {
+        if (uid === this.uid) {
+          this.createConnection(this.uid);
+          this.waitForOffer(this.uid);
+        } else {
+          this.createConnection(uid);
+          this.createChannel(uid);
+          this.createOffer(uid);
+          this.waitForAnswer(uid);
+        }
       }
-
-      // this.createConnection();
-      // this.createOffer();
     });
+  }
 
-
-    // db.ref(this.connectionId).once('value').then((dbData) => {
-    //   if (dbData.exists()) {
-    //     this.type = 'answer';
-    //   } else {
-    //     this.type = 'offer';
-    //   }
-    //
-    //   this.createConnection();
-    //
-    //   if (dbData.exists()) {
-    //     this.waitForOffer();
-    //   } else {
-    //     this.createChannel();
-    //     this.createOffer();
-    //     this.waitForAnswer();
-    //   }
-    // });
+  enterRoom() {
+    return firebase.database().ref(`${this.connectionId}`)
+      .child(this.uid)
+      .set({
+        'uid': this.uid
+      });
   }
 
   onSendChannelStateChange() {
@@ -135,69 +107,67 @@ class RTCPConnect {
     }
   }
 
-  createConnection() {
+  createConnection(uid) {
     trace('Using SCTP based data channels');
     const connection = new RTCPeerConnection(servers, this.pcConstraint);
     connection.onicecandidate = this.onIceCandidate.bind(this);
 
-    this.peers[this.uid].connection = connection;
+    this.peers[uid] = {};
+    this.peers[uid].connection = connection;
     console.log(this.peers);
 
     trace('Created local peer connection object localConnection');
     return connection;
   }
 
-  waitForOffer() {
-    this.connection.ondatachannel = this.receiveChannelCallback.bind(this);
+  waitForOffer(uid) {
+    const connection = this.peers[uid].connection;
+    connection.ondatachannel = this.receiveChannelCallback.bind(this);
 
-    this.offer.on('value', (dbData) => {
+    this.offer(uid).on('value', (dbData) => {
       if (dbData.val() && !this.offerIsUpdating) {
         let offer = new RTCSessionDescription(dbData.val());
-        this.connection.setRemoteDescription(offer);
+        connection.setRemoteDescription(offer);
 
-        this.connection.createAnswer().then(
-          this.answerReady.bind(this),
+        connection.createAnswer().then(
+          (answer) => this.answerReady(answer, uid),
           this._onCreateSessionDescriptionError
         )
       }
-
-      this.offerIsUpdating = false;
     });
 
-    this.iceCandidate.on('value', (dbData) => {
-      if (dbData.val() && !this.iceCandidateIsUpdating) {
-        this.connection.addIceCandidate(new RTCIceCandidate(dbData.val()));
+    this.iceCandidate(uid).on('child_added', (dbData) => {
+      if (dbData.val()) {
+        connection.addIceCandidate(new RTCIceCandidate(dbData.val()));
       }
-      this.iceCandidateIsUpdating = false;
     });
   }
 
-  waitForAnswer() {
-    this.answer.on('value', (dbData) => {
-      if (dbData.val() && !this.answerIsUpdating) {
+  waitForAnswer(uid) {
+    const connection = this.peers[uid].connection;
+    this.answer(uid).on('value', (dbData) => {
+      if (dbData.val()) {
         let answer = new RTCSessionDescription(dbData.val());
-        this.connection.setRemoteDescription(answer);
+        connection.setRemoteDescription(answer);
       }
-
-      this.answerIsUpdating = false;
     });
   }
 
   onIceCandidate(event) {
     trace('local ice callback');
     if (event.candidate) {
-      const ice = this.iceCandidate.push();
+      const ice = this.iceCandidate(this.uid).push();
       ice.set(event.candidate.toJSON());
     }
   }
 
-  createChannel() {
-    const connection = this.peers[this.uid].connection;
+  createChannel(uid) {
+    const connection = this.peers[uid].connection;
     const channel = connection.createDataChannel(this.connectionId,
       this.dataConstraint);
     trace(`Created send data channel with id: ${this.connectionId}`);
 
-    this.peers[this.uid].channel = channel;
+    this.peers[uid].channel = channel;
 
     this.bindChannelEvents(channel);
 
@@ -223,27 +193,28 @@ class RTCPConnect {
     channel.onclose = this.onSendChannelStateChange.bind(this);
   }
 
-  createOffer() {
-    const connection = this.peers[this.uid].connection;
+  createOffer(uid) {
+    const connection = this.peers[uid].connection;
 
     connection.createOffer().then(
-      this.offerReady.bind(this),
+      (offer) =>
+        this.offerReady(offer, uid),
       this._onCreateSessionDescriptionError
     );
   }
 
-  offerReady(offer) {
-    const connection = this.peers[this.uid].connection;
+  offerReady(offer, uid) {
+    const connection = this.peers[uid].connection;
     connection.setLocalDescription(offer);
     trace('Offer from localConnection \n' + offer.sdp);
-    this.offer.update(offer.toJSON());
+    this.offer(uid).update(offer.toJSON());
   }
 
-  answerReady(answer) {
-    const connection = this.peers[this.uid].connection;
+  answerReady(answer, uid) {
+    const connection = this.peers[uid].connection;
     connection.setLocalDescription(answer);
     trace('Answer from connection \n' + answer.sdp);
-    this.answer.update(answer.toJSON());
+    this.answer(uid).update(answer.toJSON());
   }
 
   _onCreateSessionDescriptionError(error) {

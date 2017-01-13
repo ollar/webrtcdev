@@ -25,11 +25,6 @@ class MainView extends Backbone.View {
       this.button.attr('disabled', 'disabled');
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
-
-    window.onbeforeunload = function(e) {
-      Sync.trigger('channelClose');
-      return null;
-    };
   }
 
   get events() {

@@ -3,6 +3,8 @@ const uuid = require('./utils').uuid;
 const MainView = require('./views/main');
 const Sync = require('./sync');
 
+console.log('hi');
+
 const Router = Backbone.Router.extend({
   routes: {
     '': 'start',

@@ -76,14 +76,23 @@ class RTCPConnect {
 
       if (uid) {
         if (uid === this.uid) {
-          this.createConnection(this.uid);
-          this.waitForOffer(this.uid);
+          // this.createConnection(this.uid);
+          return;
         } else {
           this.createConnection(uid);
+          this.waitForOffer(uid);
           this.createChannel(uid);
           this.createOffer(uid);
           this.waitForAnswer(uid);
         }
+      }
+    });
+
+    db.ref(this.connectionId).on('child_removed', (dbData) => {
+      const uid = dbData.val().uid;
+
+      if (uid) {
+        this.dropConnection(uid);
       }
     });
   }
@@ -96,12 +105,12 @@ class RTCPConnect {
       });
   }
 
-  onSendChannelStateChange() {
-    trace('Send channel state is: ' + this.sendChannel.readyState);
+  onSendChannelStateChange(channel) {
+    trace('Send channel state is: ' + channel.readyState);
 
-    if (this.sendChannel.readyState === 'open') {
+    if (channel.readyState === 'open') {
       Sync.trigger('channelOpen');
-    } else if (this.sendChannel.readyState === 'closed') {
+    } else if (channel.readyState === 'closed') {
       Sync.trigger('channelClosed');
       firebase.database().ref(`${this.connectionId}/${this.uid}`).remove();
     }
@@ -148,6 +157,7 @@ class RTCPConnect {
     this.answer(uid).on('value', (dbData) => {
       if (dbData.val()) {
         let answer = new RTCSessionDescription(dbData.val());
+        this.peers[uid].answer = answer;
         connection.setRemoteDescription(answer);
       }
     });
@@ -175,10 +185,9 @@ class RTCPConnect {
   }
 
   receiveChannelCallback(event) {
-    const channel = this.peers[this.uid].channel;
-
     trace('Receive Channel Callback');
     channel = event.channel;
+
     this.bindChannelEvents(channel);
   }
 
@@ -189,16 +198,18 @@ class RTCPConnect {
         outgoing: false,
       });
     };
-    channel.onopen = this.onSendChannelStateChange.bind(this);
-    channel.onclose = this.onSendChannelStateChange.bind(this);
+    channel.onopen = () => this.onSendChannelStateChange(channel);
+    channel.onclose = () => this.onSendChannelStateChange(channel);
   }
 
   createOffer(uid) {
     const connection = this.peers[uid].connection;
 
     connection.createOffer().then(
-      (offer) =>
-        this.offerReady(offer, uid),
+      (offer) => {
+        this.peers[uid].offer = offer;
+        this.offerReady(offer, uid);
+      },
       this._onCreateSessionDescriptionError
     );
   }
@@ -221,8 +232,20 @@ class RTCPConnect {
     trace('Failed to create session description: ' + error.toString());
   }
 
+  dropConnection(uid) {
+    const connection = this.peers[uid].connection;
+    const channel = this.peers[uid].channel;
+
+    if (channel) channel.close();
+    if (connection) connection.close();
+
+    this.peers[uid] = null;
+  }
+
   send(text) {
-    this.sendChannel.send(text);
+    _.map(this.peers, (peer) => {
+      if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
+    });
     this.messageHistoryUpdate({
       data: text,
       outgoing: true,

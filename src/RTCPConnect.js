@@ -61,7 +61,7 @@ class RTCPConnect {
 
     this.iceCandidate = (uid) => db.ref(`${this.connectionId}/${uid}/iceCandidate`);
     this.offer = (uid) => db.ref(`${this.connectionId}/${uid}/offer`);
-    this.answer = (uid) => db.ref(`${this.connectionId}/${uid}/answer`);
+    this.answer = (uid) => db.ref(`${this.connectionId}/${this.uid}/answer`);
 
     Sync.on('sendMessage', this.send, this);
     Sync.on('channelClose', (uid) => {
@@ -76,13 +76,21 @@ class RTCPConnect {
 
       if (uid) {
         if (uid === this.uid) {
-          // this.createConnection(this.uid);
+          // we entered room
+          // create simple connection just to bind events
+          // wait for other users offers
+          this.createConnection(this.uid);
+          this.waitForOffer(this.uid);
           return;
         } else {
+          // someone entered room
+          // we create connection with him
           this.createConnection(uid);
-          this.waitForOffer(uid);
+          // create channels
           this.createChannel(uid);
+          // send offer
           this.createOffer(uid);
+          // and wait for answer
           this.waitForAnswer(uid);
         }
       }
@@ -119,7 +127,14 @@ class RTCPConnect {
   createConnection(uid) {
     trace('Using SCTP based data channels');
     const connection = new RTCPeerConnection(servers, this.pcConstraint);
-    connection.onicecandidate = this.onIceCandidate.bind(this);
+
+    connection.ondatachannel = (event) =>
+      this.receiveChannelCallback(event, uid);
+
+    if (this.uid !== uid) {
+      connection.onicecandidate = (event) =>
+      this.onIceCandidate(event, uid);
+    }
 
     this.peers[uid] = {};
     this.peers[uid].connection = connection;
@@ -131,15 +146,18 @@ class RTCPConnect {
 
   waitForOffer(uid) {
     const connection = this.peers[uid].connection;
-    connection.ondatachannel = this.receiveChannelCallback.bind(this);
 
-    this.offer(uid).on('value', (dbData) => {
-      if (dbData.val() && !this.offerIsUpdating) {
+    this.offer(this.uid).on('child_added', (dbData) => {
+      if (dbData.val()) {
+        const _uid = dbData.key;
         let offer = new RTCSessionDescription(dbData.val());
         connection.setRemoteDescription(offer);
 
         connection.createAnswer().then(
-          (answer) => this.answerReady(answer, uid),
+          (answer) => {
+            this.answer(this.uid).child(_uid).set(answer.toJSON());
+            // this.answerReady(answer, _uid),
+          },
           this._onCreateSessionDescriptionError
         )
       }
@@ -153,20 +171,19 @@ class RTCPConnect {
   }
 
   waitForAnswer(uid) {
-    const connection = this.peers[uid].connection;
-    this.answer(uid).on('value', (dbData) => {
+    const connection = this.peers[this.uid].connection;
+    this.answer(this.uid).on('child_added', (dbData) => {
       if (dbData.val()) {
         let answer = new RTCSessionDescription(dbData.val());
-        this.peers[uid].answer = answer;
         connection.setRemoteDescription(answer);
       }
     });
   }
 
-  onIceCandidate(event) {
+  onIceCandidate(event, uid) {
     trace('local ice callback');
     if (event.candidate) {
-      const ice = this.iceCandidate(this.uid).push();
+      const ice = this.iceCandidate(uid).push();
       ice.set(event.candidate.toJSON());
     }
   }
@@ -184,9 +201,11 @@ class RTCPConnect {
     return channel;
   }
 
-  receiveChannelCallback(event) {
+  receiveChannelCallback(event, uid) {
     trace('Receive Channel Callback');
-    channel = event.channel;
+    const channel = event.channel;
+
+    this.peers[uid].channel = channel;
 
     this.bindChannelEvents(channel);
   }
@@ -207,39 +226,41 @@ class RTCPConnect {
 
     connection.createOffer().then(
       (offer) => {
-        this.peers[uid].offer = offer;
-        this.offerReady(offer, uid);
+        connection.setLocalDescription(offer);
+        this.offer(this.uid).child(uid).set(offer.toJSON());
       },
       this._onCreateSessionDescriptionError
     );
   }
 
-  offerReady(offer, uid) {
-    const connection = this.peers[uid].connection;
-    connection.setLocalDescription(offer);
-    trace('Offer from localConnection \n' + offer.sdp);
-    this.offer(uid).update(offer.toJSON());
-  }
+  // offerReady(offer, uid) {
+  //   const connection = this.peers[uid].connection;
+  //   connection.setLocalDescription(offer);
+  //   trace('Offer from localConnection \n' + offer.sdp);
+  //   this.offer(this.uid).child(uid).set(offer.toJSON());
+  //   // this.offer(uid).update(offer.toJSON());
+  // }
 
-  answerReady(answer, uid) {
-    const connection = this.peers[uid].connection;
-    connection.setLocalDescription(answer);
-    trace('Answer from connection \n' + answer.sdp);
-    this.answer(uid).update(answer.toJSON());
-  }
+  // answerReady(answer, uid) {
+  //   const connection = this.peers[uid].connection;
+  //   connection.setLocalDescription(answer);
+  //   trace('Answer from connection \n' + answer.sdp);
+  //   this.answer(uid).child(this.uid).set(answer.toJSON());
+  //   // this.answer(uid).update(answer.toJSON());
+  // }
 
   _onCreateSessionDescriptionError(error) {
     trace('Failed to create session description: ' + error.toString());
   }
 
   dropConnection(uid) {
-    const connection = this.peers[uid].connection;
-    const channel = this.peers[uid].channel;
-
-    if (channel) channel.close();
-    if (connection) connection.close();
-
-    this.peers[uid] = null;
+    // const connection = this.peers[uid].connection;
+    // const channel = this.peers[uid].channel;
+    //
+    // if (channel) channel.close();
+    // if (connection) connection.close();
+    //
+    // this.peers[uid] = null;
   }
 
   send(text) {

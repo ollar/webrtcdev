@@ -54,6 +54,8 @@ class RTCPConnect {
     this.uid = uuid();
 
     this.peers = {};
+    window.peers = this.peers;
+    window.uid = this.uid;
 
     this.connectionId = connectionId;
     this.pcConstraint = null;
@@ -74,13 +76,15 @@ class RTCPConnect {
     db.ref(this.connectionId).on('child_added', (dbData) => {
       const uid = dbData.val().uid;
 
+      console.log(this.peers, uid);
+
       if (uid) {
         if (uid === this.uid) {
           // we entered room
           // create simple connection just to bind events
           // wait for other users offers
-          this.createConnection(this.uid);
-          this.waitForOffer(this.uid);
+          // this.createConnection(this.uid);
+          this.waitForOffer();
           return;
         } else {
           // someone entered room
@@ -113,27 +117,16 @@ class RTCPConnect {
       });
   }
 
-  onSendChannelStateChange(channel) {
-    trace('Send channel state is: ' + channel.readyState);
-
-    if (channel.readyState === 'open') {
-      Sync.trigger('channelOpen');
-    } else if (channel.readyState === 'closed') {
-      Sync.trigger('channelClosed');
-      firebase.database().ref(`${this.connectionId}/${this.uid}`).remove();
-    }
-  }
-
   createConnection(uid) {
     trace('Using SCTP based data channels');
     const connection = new RTCPeerConnection(servers, this.pcConstraint);
 
     connection.ondatachannel = (event) =>
-      this.receiveChannelCallback(event, uid);
+      this._receiveChannelCallback(event, uid);
 
     if (this.uid !== uid) {
       connection.onicecandidate = (event) =>
-      this.onIceCandidate(event, uid);
+        this._onIceCandidate(event, uid);
     }
 
     this.peers[uid] = {};
@@ -144,50 +137,6 @@ class RTCPConnect {
     return connection;
   }
 
-  waitForOffer(uid) {
-    const connection = this.peers[uid].connection;
-
-    this.offer(this.uid).on('child_added', (dbData) => {
-      if (dbData.val()) {
-        const _uid = dbData.key;
-        let offer = new RTCSessionDescription(dbData.val());
-        connection.setRemoteDescription(offer);
-
-        connection.createAnswer().then(
-          (answer) => {
-            this.answer(this.uid).child(_uid).set(answer.toJSON());
-            // this.answerReady(answer, _uid),
-          },
-          this._onCreateSessionDescriptionError
-        )
-      }
-    });
-
-    this.iceCandidate(uid).on('child_added', (dbData) => {
-      if (dbData.val()) {
-        connection.addIceCandidate(new RTCIceCandidate(dbData.val()));
-      }
-    });
-  }
-
-  waitForAnswer(uid) {
-    const connection = this.peers[this.uid].connection;
-    this.answer(this.uid).on('child_added', (dbData) => {
-      if (dbData.val()) {
-        let answer = new RTCSessionDescription(dbData.val());
-        connection.setRemoteDescription(answer);
-      }
-    });
-  }
-
-  onIceCandidate(event, uid) {
-    trace('local ice callback');
-    if (event.candidate) {
-      const ice = this.iceCandidate(uid).push();
-      ice.set(event.candidate.toJSON());
-    }
-  }
-
   createChannel(uid) {
     const connection = this.peers[uid].connection;
     const channel = connection.createDataChannel(this.connectionId,
@@ -196,29 +145,9 @@ class RTCPConnect {
 
     this.peers[uid].channel = channel;
 
-    this.bindChannelEvents(channel);
+    this._bindChannelEvents(channel);
 
     return channel;
-  }
-
-  receiveChannelCallback(event, uid) {
-    trace('Receive Channel Callback');
-    const channel = event.channel;
-
-    this.peers[uid].channel = channel;
-
-    this.bindChannelEvents(channel);
-  }
-
-  bindChannelEvents(channel) {
-    channel.onmessage = (event) => {
-      this.messageHistoryUpdate({
-        data: event.data,
-        outgoing: false,
-      });
-    };
-    channel.onopen = () => this.onSendChannelStateChange(channel);
-    channel.onclose = () => this.onSendChannelStateChange(channel);
   }
 
   createOffer(uid) {
@@ -227,10 +156,90 @@ class RTCPConnect {
     connection.createOffer().then(
       (offer) => {
         connection.setLocalDescription(offer);
-        this.offer(this.uid).child(uid).set(offer.toJSON());
+        this.offer(uid).child(this.uid).set(offer.toJSON());
       },
       this._onCreateSessionDescriptionError
     );
+  }
+
+  waitForOffer(uid) {
+    this.offer(this.uid).on('child_added', (dbData) => {
+      if (dbData.val()) {
+        const _uid = dbData.key;
+        let offer = new RTCSessionDescription(dbData.val());
+        let _connection = this.peers[_uid].connection;
+        _connection.setRemoteDescription(offer);
+
+        _connection.createAnswer().then(
+          (answer) => {
+            _connection.setLocalDescription(answer);
+            this.answer(this.uid).child(_uid).set(answer.toJSON());
+            // this.answerReady(answer, _uid),
+          },
+          this._onCreateSessionDescriptionError
+        )
+      }
+    });
+
+    this.iceCandidate(this.uid).on('child_added', (dbData) => {
+      let foreignUid = dbData.key;
+
+      this.iceCandidate(this.uid).child(foreignUid).on('child_added', (_dbData) => {
+        if (_dbData.val()) {
+          let _connection = this.peers[foreignUid].connection;
+          _connection.addIceCandidate(new RTCIceCandidate(_dbData.val()));
+        }
+      });
+    });
+  }
+
+  waitForAnswer(uid) {
+    const connection = this.peers[uid].connection;
+    this.answer(uid).on('child_added', (dbData) => {
+      if (dbData.val() && dbData.key === uid) {
+        let answer = new RTCSessionDescription(dbData.val());
+        connection.setRemoteDescription(answer);
+      }
+    });
+  }
+
+  _onIceCandidate(event, uid) {
+    trace('local ice callback');
+    if (event.candidate) {
+      const ice = this.iceCandidate(uid).child(this.uid).push();
+      ice.set(event.candidate.toJSON());
+    }
+  }
+
+  _receiveChannelCallback(event, uid) {
+    trace('Receive Channel Callback');
+    const channel = event.channel;
+
+    this.peers[uid].channel = channel;
+
+    this._bindChannelEvents(channel);
+  }
+
+  _bindChannelEvents(channel) {
+    channel.onmessage = (event) => {
+      this.messageHistoryUpdate({
+        data: event.data,
+        outgoing: false,
+      });
+    };
+    channel.onopen = () => this._onSendChannelStateChange(channel);
+    channel.onclose = () => this._onSendChannelStateChange(channel);
+  }
+
+  _onSendChannelStateChange(channel) {
+    trace('Send channel state is: ' + channel.readyState);
+
+    if (channel.readyState === 'open') {
+      Sync.trigger('channelOpen');
+    } else if (channel.readyState === 'closed') {
+      Sync.trigger('channelClosed');
+      firebase.database().ref(`${this.connectionId}/${this.uid}`).remove();
+    }
   }
 
   // offerReady(offer, uid) {

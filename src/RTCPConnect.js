@@ -1,56 +1,54 @@
 const adapter = require('webrtc-adapter');
-const firebase = require('./firebaseConfig');
 
 const trace = require('./utils').trace;
 const uuid = require('./utils').uuid;
+const _str = require('./utils')._str;
 
 const Sync = require('./sync');
 
-// const servers = {
-//   iceServers: [
-//     {url:'stun:stun01.sipphone.com'},
-//     {url:'stun:stun.ekiga.net'},
-//     {url:'stun:stun.fwdnet.net'},
-//     {url:'stun:stun.ideasip.com'},
-//     {url:'stun:stun.iptel.org'},
-//     {url:'stun:stun.rixtelecom.se'},
-//     {url:'stun:stun.schlund.de'},
-//     {url:'stun:stun.l.google.com:19302'},
-//     {url:'stun:stun1.l.google.com:19302'},
-//     {url:'stun:stun2.l.google.com:19302'},
-//     {url:'stun:stun3.l.google.com:19302'},
-//     {url:'stun:stun4.l.google.com:19302'},
-//     {url:'stun:stunserver.org'},
-//     {url:'stun:stun.softjoys.com'},
-//     {url:'stun:stun.voiparound.com'},
-//     {url:'stun:stun.voipbuster.com'},
-//     {url:'stun:stun.voipstunt.com'},
-//     {url:'stun:stun.voxgratia.org'},
-//     {url:'stun:stun.xten.com'},
-//     {
-//     	url: 'turn:numb.viagenie.ca',
-//     	credential: 'muazkh',
-//     	username: 'webrtc@live.com'
-//     },
-//     {
-//     	url: 'turn:192.158.29.39:3478?transport=udp',
-//     	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-//     	username: '28224511:1379330808'
-//     },
-//     {
-//     	url: 'turn:192.158.29.39:3478?transport=tcp',
-//     	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-//     	username: '28224511:1379330808'
-//     },
-//   ]
-// };
+const servers = {
+  iceServers: [
+    {url:'stun:stun01.sipphone.com'},
+    {url:'stun:stun.ekiga.net'},
+    {url:'stun:stun.fwdnet.net'},
+    {url:'stun:stun.ideasip.com'},
+    {url:'stun:stun.iptel.org'},
+    {url:'stun:stun.rixtelecom.se'},
+    {url:'stun:stun.schlund.de'},
+    {url:'stun:stun.l.google.com:19302'},
+    {url:'stun:stun1.l.google.com:19302'},
+    {url:'stun:stun2.l.google.com:19302'},
+    {url:'stun:stun3.l.google.com:19302'},
+    {url:'stun:stun4.l.google.com:19302'},
+    {url:'stun:stunserver.org'},
+    {url:'stun:stun.softjoys.com'},
+    {url:'stun:stun.voiparound.com'},
+    {url:'stun:stun.voipbuster.com'},
+    {url:'stun:stun.voipstunt.com'},
+    {url:'stun:stun.voxgratia.org'},
+    {url:'stun:stun.xten.com'},
+    {
+    	url: 'turn:numb.viagenie.ca',
+    	credential: 'muazkh',
+    	username: 'webrtc@live.com'
+    },
+    {
+    	url: 'turn:192.158.29.39:3478?transport=udp',
+    	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+    	username: '28224511:1379330808'
+    },
+    {
+    	url: 'turn:192.158.29.39:3478?transport=tcp',
+    	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+    	username: '28224511:1379330808'
+    },
+  ]
+};
 
-const servers = null;
+// const servers = null;
 
 class RTCPConnect {
   constructor(connectionId) {
-    const db = firebase.database();
-
     this.uid = uuid();
 
     this.peers = {};
@@ -61,32 +59,27 @@ class RTCPConnect {
     this.pcConstraint = null;
     this.dataConstraint = null;
 
-    this.iceCandidate = (uid) => db.ref(`${this.connectionId}/${uid}/iceCandidate`);
-    this.offer = (uid) => db.ref(`${this.connectionId}/${uid}/offer`);
-    this.answer = (uid) => db.ref(`${this.connectionId}/${this.uid}/answer`);
-
     Sync.on('sendMessage', this.send, this);
     Sync.on('channelClose', (uid) => {
       trace(`Channel close ${uid}`);
-      db.ref(`${this.connectionId}/${uid}`).remove();
+
+      this.ws.send(_str({
+        type: 'channelClose',
+        uid: uid || this.uid,
+      }));
     });
 
-    this.enterRoom();
+    this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    this.ws.onopen = () => {
+      this.enterRoom();
+    }
 
-    db.ref(this.connectionId).on('child_added', (dbData) => {
-      const uid = dbData.val().uid;
+    this.ws.onmessage = (event) => {
+      let message = JSON.parse(event.data);
 
-      console.log(this.peers, uid);
-
-      if (uid) {
-        if (uid === this.uid) {
-          // we entered room
-          // create simple connection just to bind events
-          // wait for other users offers
-          // this.createConnection(this.uid);
-          this.waitForOffer();
-          return;
-        } else {
+      switch (message.type) {
+        case 'newUser':
+          let uid = message.uid
           // someone entered room
           // we create connection with him
           this.createConnection(uid);
@@ -94,27 +87,28 @@ class RTCPConnect {
           this.createChannel(uid);
           // send offer
           this.createOffer(uid);
-          // and wait for answer
-          this.waitForAnswer(uid);
-        }
-      }
-    });
+          break;
 
-    db.ref(this.connectionId).on('child_removed', (dbData) => {
-      const uid = dbData.val().uid;
+        case 'offerFrom':
+          this.handleOffer(message);
+          break;
 
-      if (uid) {
-        this.dropConnection(uid);
+        case 'answerFrom':
+          this.handleAnswer(message);
+          break;
+
+        case 'iceCandidateFrom':
+          this.handleIceCandidate(message);
+          break;
       }
-    });
+    }
   }
 
   enterRoom() {
-    return firebase.database().ref(`${this.connectionId}`)
-      .child(this.uid)
-      .set({
-        'uid': this.uid
-      });
+    this.ws.send(_str({
+      type: 'enterRoom',
+      uid: this.uid,
+    }));
   }
 
   createConnection(uid) {
@@ -156,58 +150,62 @@ class RTCPConnect {
     connection.createOffer().then(
       (offer) => {
         connection.setLocalDescription(offer);
-        this.offer(uid).child(this.uid).set(offer.toJSON());
+        this.ws.send(_str({
+          type: 'offer',
+          fromUid: this.uid,
+          toUid: uid,
+          offer: _str(offer.toJSON()),
+        }));
       },
       this._onCreateSessionDescriptionError
     );
   }
 
-  waitForOffer(uid) {
-    this.offer(this.uid).on('child_added', (dbData) => {
-      if (dbData.val()) {
-        const _uid = dbData.key;
-        let offer = new RTCSessionDescription(dbData.val());
-        let _connection = this.peers[_uid].connection;
-        _connection.setRemoteDescription(offer);
+  handleOffer(message) {
+    const _uid = message.fromUid;
+    let offer = new RTCSessionDescription(JSON.parse(message.offer));
 
-        _connection.createAnswer().then(
-          (answer) => {
-            _connection.setLocalDescription(answer);
-            this.answer(this.uid).child(_uid).set(answer.toJSON());
-            // this.answerReady(answer, _uid),
-          },
-          this._onCreateSessionDescriptionError
-        )
-      }
-    });
+    let _connection = this.createConnection(_uid);
+    this.createChannel(_uid);
 
-    this.iceCandidate(this.uid).on('child_added', (dbData) => {
-      let foreignUid = dbData.key;
+    _connection.setRemoteDescription(offer);
 
-      this.iceCandidate(this.uid).child(foreignUid).on('child_added', (_dbData) => {
-        if (_dbData.val()) {
-          let _connection = this.peers[foreignUid].connection;
-          _connection.addIceCandidate(new RTCIceCandidate(_dbData.val()));
-        }
-      });
-    });
+    _connection.createAnswer().then(
+      (answer) => {
+        _connection.setLocalDescription(answer);
+        this.ws.send(_str({
+          type: 'answer',
+          fromUid: this.uid,
+          toUid: _uid,
+          answer: _str(answer.toJSON()),
+        }));
+        // this.answerReady(answer, _uid),
+      },
+      this._onCreateSessionDescriptionError
+    );
   }
 
-  waitForAnswer(uid) {
-    const connection = this.peers[uid].connection;
-    this.answer(uid).on('child_added', (dbData) => {
-      if (dbData.val() && dbData.key === uid) {
-        let answer = new RTCSessionDescription(dbData.val());
-        connection.setRemoteDescription(answer);
-      }
-    });
+  handleAnswer(message) {
+    const connection = this.peers[message.fromUid].connection;
+
+    let answer = new RTCSessionDescription(JSON.parse(message.answer));
+    connection.setRemoteDescription(answer);
+  }
+
+  handleIceCandidate(message) {
+    const connection = this.peers[message.fromUid].connection;
+    connection.addIceCandidate(new RTCIceCandidate(JSON.parse(message.iceCandidate)));
   }
 
   _onIceCandidate(event, uid) {
     trace('local ice callback');
     if (event.candidate) {
-      const ice = this.iceCandidate(uid).child(this.uid).push();
-      ice.set(event.candidate.toJSON());
+      this.ws.send(_str({
+        type: 'iceCandidate',
+        fromUid: this.uid,
+        toUid: uid,
+        iceCandidate: _str(event.candidate.toJSON()),
+      }));
     }
   }
 
@@ -237,26 +235,9 @@ class RTCPConnect {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen');
     } else if (channel.readyState === 'closed') {
-      Sync.trigger('channelClosed');
-      firebase.database().ref(`${this.connectionId}/${this.uid}`).remove();
+      Sync.trigger('channelClose');
     }
   }
-
-  // offerReady(offer, uid) {
-  //   const connection = this.peers[uid].connection;
-  //   connection.setLocalDescription(offer);
-  //   trace('Offer from localConnection \n' + offer.sdp);
-  //   this.offer(this.uid).child(uid).set(offer.toJSON());
-  //   // this.offer(uid).update(offer.toJSON());
-  // }
-
-  // answerReady(answer, uid) {
-  //   const connection = this.peers[uid].connection;
-  //   connection.setLocalDescription(answer);
-  //   trace('Answer from connection \n' + answer.sdp);
-  //   this.answer(uid).child(this.uid).set(answer.toJSON());
-  //   // this.answer(uid).update(answer.toJSON());
-  // }
 
   _onCreateSessionDescriptionError(error) {
     trace('Failed to create session description: ' + error.toString());

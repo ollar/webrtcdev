@@ -12,7 +12,12 @@ function uuid() {
   return ko() + ko() + '-' + ko() + '-' + ko() + '-' + ko();
 }
 
+function _str(obj) {
+  return JSON.stringify(obj);
+}
+
 module.exports = {
-  trace: trace,
-  uuid: uuid,
+  trace,
+  uuid,
+  _str,
 }

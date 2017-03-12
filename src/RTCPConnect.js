@@ -45,8 +45,6 @@ const servers = {
   ]
 };
 
-// const servers = null;
-
 class RTCPConnect {
   constructor(connectionId) {
     this.uid = uuid();

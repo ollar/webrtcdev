@@ -20,7 +20,7 @@ class MainView extends Backbone.View {
       this.textinput.removeAttr('disabled');
       this.button.removeAttr('disabled');
     }, this);
-    this.listenTo(Sync, 'channelClosed', () => {
+    this.listenTo(Sync, 'channelClose', () => {
       this.textinput.attr('disabled', 'disabled');
       this.button.attr('disabled', 'disabled');
     }, this);
@@ -46,7 +46,9 @@ class MainView extends Backbone.View {
       text: messageModel.get('data'),
     });
 
-    return this.messagesList.append(message);
+    this.messagesList.append(message);
+
+    this.messagesList[0].scrollTop = this.messagesList[0].scrollHeight;
   }
 }
 

@@ -6,4 +6,22 @@ web:
     - ./public/:/app/
   ports:
     - "8899:80"
+
+  links:
+    - python
+
   mem_limit: 8m
+
+python:
+  build: .
+  dockerfile: pythonDockerfile
+
+  volumes:
+    - ./server:/back
+
+  working_dir: /back
+
+  ports:
+    - "8765:8765"
+
+  mem_limit: 16m

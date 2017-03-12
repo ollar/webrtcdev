@@ -7,12 +7,9 @@ web:
   ports:
     - "8899:80"
 
-  links:
-    - python
-
   mem_limit: 8m
 
-python:
+server:
   build: .
   dockerfile: pythonDockerfile
 

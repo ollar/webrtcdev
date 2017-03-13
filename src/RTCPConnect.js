@@ -47,6 +47,9 @@ const servers = {
 
 class RTCPConnect {
   constructor(connectionId) {
+    this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    // this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+
     this.uid = uuid();
 
     this.peers = {};
@@ -60,15 +63,15 @@ class RTCPConnect {
     Sync.on('sendMessage', this.send, this);
     Sync.on('channelClose', (uid) => {
       trace(`Channel close ${uid}`);
+    });
 
+    Sync.on('channelCloseWS', (uid) => {
       this.ws.send(_str({
         type: 'channelClose',
         uid: uid || this.uid,
       }));
     });
 
-    // this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
-    this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
     this.ws.onopen = () => {
       this.enterRoom();
     }
@@ -99,6 +102,9 @@ class RTCPConnect {
         case 'iceCandidateFrom':
           this.handleIceCandidate(message);
           break;
+
+        case 'channelClose':
+          this.dropConnection(message.uid)
       }
     }
   }
@@ -234,7 +240,9 @@ class RTCPConnect {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen');
     } else if (channel.readyState === 'closed') {
-      Sync.trigger('channelClose');
+      console.log(_.size(this.peers));
+      if (_.size(this.peers) === 0)
+        Sync.trigger('channelClose');
     }
   }
 
@@ -243,13 +251,13 @@ class RTCPConnect {
   }
 
   dropConnection(uid) {
-    // const connection = this.peers[uid].connection;
-    // const channel = this.peers[uid].channel;
-    //
-    // if (channel) channel.close();
-    // if (connection) connection.close();
-    //
-    // this.peers[uid] = null;
+    const connection = this.peers[uid].connection;
+    const channel = this.peers[uid].channel;
+
+    if (channel) channel.close();
+    if (connection) connection.close();
+
+    delete this.peers[uid];
   }
 
   send(text) {

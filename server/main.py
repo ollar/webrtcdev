@@ -10,6 +10,7 @@ connections = {}
 
 
 async def RTCServer(websocket, path):
+    message = None
     if not connections.get(path):
         connections[path] = {}
     while True:
@@ -20,9 +21,9 @@ async def RTCServer(websocket, path):
         if message['type'] == 'enterRoom':
             for key, ws in connections[path].items():
                 await ws.send(json.dumps({
-                        'type': 'newUser',
-                        'uid': message.get('uid'),
-                    }))
+                    'type': 'newUser',
+                    'uid': message.get('uid'),
+                }))
 
             connections[path][message.get('uid')] = websocket
 
@@ -54,6 +55,11 @@ async def RTCServer(websocket, path):
             if connections[path][message.get('uid')]:
                 await connections[path][message['uid']].close()
                 del connections[path][message['uid']]
+                for key, ws in connections[path].items():
+                    await ws.send(json.dumps({
+                        'type': 'channelClose',
+                        'uid': message['uid'],
+                    }))
 
 start_server = websockets.serve(RTCServer, '0.0.0.0', 8765)
 

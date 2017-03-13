@@ -21,7 +21,7 @@ const Router = Backbone.Router.extend({
     });
 
     window.onunload = function() {
-      Sync.trigger('channelClose', connection.uid);
+      Sync.trigger('channelCloseWS', connection.uid);
       return null;
     };
   },

@@ -13859,8 +13859,8 @@
 	      }));
 	    });
 
-	    this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
-	    // this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+	    // this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
+	    this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
 	    this.ws.onopen = () => {
 	      this.enterRoom();
 	    }

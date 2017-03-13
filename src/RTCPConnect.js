@@ -240,7 +240,6 @@ class RTCPConnect {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen');
     } else if (channel.readyState === 'closed') {
-      console.log(_.size(this.peers));
       if (_.size(this.peers) === 0)
         Sync.trigger('channelClose');
     }

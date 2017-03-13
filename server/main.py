@@ -60,6 +60,8 @@ async def RTCServer(websocket, path):
                         'type': 'channelClose',
                         'uid': message['uid'],
                     }))
+                if len(connections[path]) == 0:
+                    del connections[path]
 
 start_server = websockets.serve(RTCServer, '0.0.0.0', 8765)
 

@@ -2,6 +2,8 @@ const HistoryCollection = require('../collections/history');
 
 const Sync = require('../sync');
 
+const pageIsVisible = require('../utils').pageIsVisible;
+
 class MainView extends Backbone.View {
   constructor(options) {
     super(options);
@@ -25,12 +27,43 @@ class MainView extends Backbone.View {
       this.button.attr('disabled', 'disabled');
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
+
+    this.requestNotificationsPermission();
   }
 
   get events() {
     return {
       'submit #sendForm': 'submitForm',
     };
+  }
+
+  requestNotificationsPermission() {
+    if (!window.Notification) {
+      console.log('Notifications are not available');
+      return;
+    }
+
+    else if (Notification.permission === "granted") {
+      return true;
+    }
+
+    else if (Notification.permission !== 'denied') {
+      Notification.requestPermission((permission) => {
+        if (permission === "granted") {
+          return true;
+          // this.notification = new Notification();
+        }
+      });
+    }
+  }
+
+  showNotification(text) {
+    if (this.requestNotificationsPermission() && !pageIsVisible()) {
+      let notification = new Notification('WebRTC', {
+        icon: 'http://lorempixel.com/50/50/',
+        body: text,
+      });
+    }
   }
 
   submitForm(e) {
@@ -47,6 +80,8 @@ class MainView extends Backbone.View {
     });
 
     this.messagesList.append(message);
+
+    this.showNotification(messageModel.get('data'));
 
     this.messagesList[0].scrollTop = this.messagesList[0].scrollHeight;
   }

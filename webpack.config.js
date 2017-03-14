@@ -1,31 +1,49 @@
 var webpack = require('webpack');
-var args = process.argv.slice(2);
 
-var env = args[0] === '--prod' ? 'prod' : 'dev';
-
-module.exports = {
-  entry: "./src/index.js",
-  output: {
-      path: __dirname + '/public',
-      filename: "bundle.js"
-  },
-  plugins: [
-    new webpack.ProvidePlugin({
-      '_': 'underscore',
-      // Backbone: 'backbone',
-      Backbone: 'exports?Backbone!' + __dirname + '/src/backboneConfig',
-      '$': 'jquery',
-    }),
-    new webpack.IgnorePlugin(/^jquery$/),
-  ],
-  module: {
-    loaders: [
-      { test: /backbone\.js$/, loader: 'imports-loader?define=>false' },
+module.exports = function(env) {
+  const config = {
+    entry: "./src/index.js",
+    output: {
+        path: __dirname + '/public',
+        filename: "bundle.js"
+    },
+    plugins: [
+      new webpack.ProvidePlugin({
+        '_': 'underscore',
+        Backbone: 'exports-loader?Backbone!' + __dirname + '/src/backboneConfig',
+        '$': 'jquery',
+      }),
+      new webpack.IgnorePlugin(/^jquery$/),
     ],
-  },
-  watch: env === 'dev',
-  watchOptions: {
-    aggregateTimeout: 100
-  },
-  devtool: env === 'dev' ? '#inline-source-map' : null,
+    module: {
+      loaders: [
+        {
+          test: /\.js$/,
+          exclude: /(node_modules|bower_components)/,
+          loader: 'babel-loader',
+          query: {
+            presets: [['env', {
+              targets: {
+                browsers: ["last 2 versions", "safari >= 7"]
+              }
+            }]]
+          },
+        },
+        { test: /backbone\.js$/, loader: 'imports-loader?define=>false' },
+      ],
+    },
+    watch: env === 'dev',
+    watchOptions: {
+      aggregateTimeout: 100
+    },
+    devtool: env === 'dev' ? '#inline-source-map' : '',
+  };
+
+  if (env === 'prod') {
+    config.plugins.push(
+      new webpack.optimize.UglifyJsPlugin({minimize: true})
+    );
+  }
+
+  return config;
 }

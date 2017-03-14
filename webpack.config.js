@@ -12,10 +12,17 @@ module.exports = {
   plugins: [
     new webpack.ProvidePlugin({
       '_': 'underscore',
-      Backbone: 'backbone',
+      // Backbone: 'backbone',
+      Backbone: 'exports?Backbone!' + __dirname + '/src/backboneConfig',
       '$': 'jquery',
     }),
+    new webpack.IgnorePlugin(/^jquery$/),
   ],
+  module: {
+    loaders: [
+      { test: /backbone\.js$/, loader: 'imports-loader?define=>false' },
+    ],
+  },
   watch: env === 'dev',
   watchOptions: {
     aggregateTimeout: 100

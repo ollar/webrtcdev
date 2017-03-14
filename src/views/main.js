@@ -19,12 +19,12 @@ class MainView extends Backbone.View {
       return this.collection.add(data);
     }, this);
     this.listenTo(Sync, 'channelOpen', () => {
-      this.textinput.removeAttr('disabled');
-      this.button.removeAttr('disabled');
+      this.textinput[0].removeAttribute('disabled');
+      this.button[0].removeAttribute('disabled');
     }, this);
     this.listenTo(Sync, 'channelClose', () => {
-      this.textinput.attr('disabled', 'disabled');
-      this.button.attr('disabled', 'disabled');
+      this.textinput[0].setAttribute('disabled', 'disabled');
+      this.button[0].setAttribute('disabled', 'disabled');
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
 
@@ -51,10 +51,13 @@ class MainView extends Backbone.View {
       Notification.requestPermission((permission) => {
         if (permission === "granted") {
           return true;
-          // this.notification = new Notification();
+        } else {
+          return false;
         }
       });
     }
+
+    return false;
   }
 
   showNotification(text) {
@@ -69,20 +72,21 @@ class MainView extends Backbone.View {
   submitForm(e) {
     e.preventDefault();
 
-    Sync.trigger('sendMessage', this.textinput.val());
+    Sync.trigger('sendMessage', this.textinput[0].value);
     this.sendForm[0].reset();
   }
 
   onMessage(messageModel) {
-    const message = $('<li />', {
-      'class': (messageModel.get('outgoing') ? 'outgoing' : ''),
+    const message = _.template('<li class="<%= className %>"><%= text %></li>');
+
+    const _m = document.createElement('div');
+    _m.innerHTML = message({
+      className: (messageModel.get('outgoing') ? 'outgoing' : ''),
       text: messageModel.get('data'),
     });
 
-    this.messagesList.append(message);
-
+    this.messagesList[0].appendChild(_m.childNodes[0]);
     this.showNotification(messageModel.get('data'));
-
     this.messagesList[0].scrollTop = this.messagesList[0].scrollHeight;
   }
 }

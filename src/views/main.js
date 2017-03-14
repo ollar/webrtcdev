@@ -10,21 +10,22 @@ class MainView extends Backbone.View {
 
     this.collection = new HistoryCollection();
 
-    this.sendForm = this.$('#sendForm');
-    this.messagesList = this.$('#messagesList');
-    this.textinput = this.$('#data');
-    this.button = this.$('#send');
+    // this.sendForm = this.$('#sendForm');
+    this.sendForm = document.getElementById('sendForm');
+    this.messagesList = document.getElementById('messagesList');
+    this.textinput = document.getElementById('data');
+    this.button = document.getElementById('send');
 
     this.listenTo(Sync, 'message', (data) => {
       return this.collection.add(data);
     }, this);
     this.listenTo(Sync, 'channelOpen', () => {
-      this.textinput[0].removeAttribute('disabled');
-      this.button[0].removeAttribute('disabled');
+      this.textinput.removeAttribute('disabled');
+      this.button.removeAttribute('disabled');
     }, this);
     this.listenTo(Sync, 'channelClose', () => {
-      this.textinput[0].setAttribute('disabled', 'disabled');
-      this.button[0].setAttribute('disabled', 'disabled');
+      this.textinput.setAttribute('disabled', 'disabled');
+      this.button.setAttribute('disabled', 'disabled');
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
 
@@ -34,6 +35,10 @@ class MainView extends Backbone.View {
   get events() {
     return {
       'submit #sendForm': 'submitForm',
+      'dragenter': 'handleDragEnter',
+      'dragover': 'handleDragOver',
+      'dragleave': 'handleDragLeave',
+      'drop': 'handleDragDrop',
     };
   }
 
@@ -72,8 +77,8 @@ class MainView extends Backbone.View {
   submitForm(e) {
     e.preventDefault();
 
-    Sync.trigger('sendMessage', this.textinput[0].value);
-    this.sendForm[0].reset();
+    Sync.trigger('sendMessage', this.textinput.value);
+    this.sendForm.reset();
   }
 
   onMessage(messageModel) {
@@ -85,9 +90,28 @@ class MainView extends Backbone.View {
       text: messageModel.get('data'),
     });
 
-    this.messagesList[0].appendChild(_m.childNodes[0]);
+    this.messagesList.appendChild(_m.childNodes[0]);
     this.showNotification(messageModel.get('data'));
-    this.messagesList[0].scrollTop = this.messagesList[0].scrollHeight;
+    this.messagesList.scrollTop = this.messagesList.scrollHeight;
+  }
+
+  // Drag functions
+  handleDragEnter(e) {
+    e.preventDefault()
+    this.el.classList.add('draddover');
+  }
+
+  handleDragOver(e) {
+    e.preventDefault()
+  }
+
+  handleDragLeave(e) {
+    this.el.classList.remove('draddover');
+  }
+
+  handleDragDrop(e) {
+    e.preventDefault();
+    Sync.trigger('sendFile', e.dataTransfer.files[0]);
   }
 }
 

@@ -47,8 +47,8 @@ const servers = {
 
 class RTCPConnect {
   constructor(connectionId) {
-    // this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
-    this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+    this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    // this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
 
     this.uid = uuid();
 
@@ -61,6 +61,8 @@ class RTCPConnect {
     this.dataConstraint = null;
 
     Sync.on('sendMessage', this.send, this);
+    Sync.on('sendFile', this.sendFile, this);
+
     Sync.on('channelClose', (uid) => {
       trace(`Channel close ${uid}`);
     });
@@ -271,6 +273,40 @@ class RTCPConnect {
 
   messageHistoryUpdate(data) {
     Sync.trigger('message', data);
+  }
+
+  sendFile(file) {
+    var chunkSize = 16384;
+
+    trace('File is ' + [file.name, file.size, file.type,
+      file.lastModifiedDate
+    ].join(' '));
+
+    if (file.size === 0) {
+      console.log('File is empty, please select a non-empty file');
+      // closeDataChannels();
+      return;
+    }
+
+    var sliceFile = function(offset) {
+      var reader = new window.FileReader();
+      reader.onload = (function() {
+        return function(e) {
+          console.log(e.target.result);
+          _.map(this.peers, (peer) => {
+            if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(e.target.result);
+          });
+          // sendChannel.send(e.target.result);
+          if (file.size > offset + e.target.result.byteLength) {
+            setTimeout(sliceFile, 0, offset + chunkSize);
+          }
+          // sendProgress.value = offset + e.target.result.byteLength;
+        };
+      })(file);
+      var slice = file.slice(offset, offset + chunkSize);
+      reader.readAsArrayBuffer(slice);
+    };
+    sliceFile(0);
   }
 }
 

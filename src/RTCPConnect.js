@@ -138,13 +138,17 @@ class RTCPConnect {
     return connection;
   }
 
-  createChannel(uid) {
+  createChannel(uid, type = '') {
     const connection = this.peers[uid].connection;
     const channel = connection.createDataChannel(this.connectionId,
       this.dataConstraint);
     trace(`Created send data channel with id: ${this.connectionId}`);
 
-    this.peers[uid].channel = channel;
+    if (type) {
+      this.peers[uid]['channel' + type] = channel;
+    } else {
+      this.peers[uid].channel = channel;
+    }
 
     this._bindChannelEvents(channel);
 
@@ -227,10 +231,21 @@ class RTCPConnect {
 
   _bindChannelEvents(channel) {
     channel.onmessage = (event) => {
-      this.messageHistoryUpdate({
-        data: event.data,
-        outgoing: false,
-      });
+      if (typeof event.data === 'string') {
+        if (event.data.indexOf('__fileDescription') > -1) {
+          event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
+        } else {
+          this.messageHistoryUpdate({
+            type: 'text',
+            data: event.data,
+            outgoing: false,
+          });
+        }
+      } else if (event.data instanceof ArrayBuffer) {
+        event.target._receiveBuffer = event.target._receiveBuffer || [];
+        event.target._receiveBuffer.push(event.data);
+      }
+
     };
     channel.onopen = () => this._onSendChannelStateChange(channel);
     channel.onclose = () => this._onSendChannelStateChange(channel);
@@ -242,6 +257,18 @@ class RTCPConnect {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen');
     } else if (channel.readyState === 'closed') {
+      if (channel._receiveBuffer) {
+        var received = new window.Blob(channel._receiveBuffer, {type: channel.__fileDescription.type});
+        var href = URL.createObjectURL(received);
+
+        this.messageHistoryUpdate({
+          type: 'file',
+          data: href,
+          __fileDescription: channel.__fileDescription || {},
+          outgoing: false,
+        });
+      }
+
       if (_.size(this.peers) === 0)
         Sync.trigger('channelClose');
     }
@@ -266,6 +293,7 @@ class RTCPConnect {
       if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
     });
     this.messageHistoryUpdate({
+      type: 'text',
       data: text,
       outgoing: true,
     });
@@ -277,6 +305,23 @@ class RTCPConnect {
 
   sendFile(file) {
     var chunkSize = 16384;
+    var _this = this;
+
+    function createFileChannels() {
+      _.forEach(_.keys(_this.peers), (key) => {
+        _this.createChannel(key, 'file');
+      });
+    }
+
+    function closeFileChannels() {
+      _.forEach(_.keys(_this.peers), (key) => {
+        if (_this.peers[key].channelfile &&
+          _this.peers[key].channelfile.readyState === 'open') {
+          _this.peers[key].channelfile.close();
+          delete _this.peers[key].channelfile;
+        }
+      });
+    }
 
     trace('File is ' + [file.name, file.size, file.type,
       file.lastModifiedDate
@@ -284,21 +329,36 @@ class RTCPConnect {
 
     if (file.size === 0) {
       console.log('File is empty, please select a non-empty file');
-      // closeDataChannels();
       return;
     }
+
+    createFileChannels();
+
+    _.map(_this.peers, (peer) => {
+      if (peer && peer.channelfile && peer.channelfile.readyState === 'open') peer.channelfile.send('__fileDescription::' +
+        _str({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        }));
+    });
 
     var sliceFile = function(offset) {
       var reader = new window.FileReader();
       reader.onload = (function() {
         return function(e) {
-          console.log(e.target.result);
-          _.map(this.peers, (peer) => {
-            if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(e.target.result);
+          _.map(_this.peers, (peer) => {
+            if (peer && peer.channelfile && peer.channelfile.readyState === 'open') peer.channelfile.send(e.target.result);
           });
-          // sendChannel.send(e.target.result);
           if (file.size > offset + e.target.result.byteLength) {
             setTimeout(sliceFile, 0, offset + chunkSize);
+          } else {
+            _this.messageHistoryUpdate({
+              type: 'text',
+              data: `Sent file "${file.name}" (${file.size})`,
+              outgoing: true,
+            });
+            closeFileChannels();
           }
           // sendProgress.value = offset + e.target.result.byteLength;
         };

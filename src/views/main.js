@@ -82,16 +82,38 @@ class MainView extends Backbone.View {
   }
 
   onMessage(messageModel) {
-    const message = _.template('<li class="<%= className %>"><%= text %></li>');
-
+    let message;
     const _m = document.createElement('div');
-    _m.innerHTML = message({
-      className: (messageModel.get('outgoing') ? 'outgoing' : ''),
-      text: messageModel.get('data'),
-    });
+
+    switch (messageModel.get('type')) {
+      case 'text':
+        message = _.template('<li class="<%= className %>"><%= text %></li>');
+        _m.innerHTML = message({
+          className: (messageModel.get('outgoing') ? 'outgoing' : ''),
+          text: messageModel.get('data'),
+        });
+        this.showNotification(messageModel.get('data'));
+        break;
+
+      case 'file':
+        message = _.template('<li class="<%= className %>">' +
+          '<a class="<%= className %>" download="<%= fileDescription.name %>" href="<%= url %>">' +
+            'Received file "<%= fileDescription.name %>" (<%= fileDescription.size %>)' +
+          '</a>' +
+        '</li>');
+        _m.innerHTML = message({
+          className: (messageModel.get('outgoing') ? 'outgoing' : ''),
+          url: messageModel.get('data'),
+          fileDescription: messageModel.get('__fileDescription'),
+        });
+        this.showNotification('Hooray! you\'ve received a file!');
+        break;
+
+      default:
+        throw new Error('Invalid message');
+    }
 
     this.messagesList.appendChild(_m.childNodes[0]);
-    this.showNotification(messageModel.get('data'));
     this.messagesList.scrollTop = this.messagesList.scrollHeight;
   }
 

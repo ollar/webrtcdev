@@ -10,10 +10,25 @@ connections = {}
 
 
 async def RTCServer(websocket, path):
+    async def channelClose():
+        if connections[path][message.get('uid')]:
+            # await connections[path][message['uid']].close()
+            del connections[path][message['uid']]
+            for key, ws in connections[path].items():
+                await ws.send(json.dumps({
+                    'type': 'channelClose',
+                    'uid': message['uid'],
+                }))
+            if len(connections[path]) == 0:
+                del connections[path]
+
     message = None
     if not connections.get(path):
         connections[path] = {}
     while True:
+        if websocket.state == 3:
+            await channelClose()
+            return
         message = await websocket.recv()
         message = json.loads(message)
         logging.info('got message {}'.format(message))
@@ -32,6 +47,8 @@ async def RTCServer(websocket, path):
                 .send(json.dumps({
                     'type': 'offerFrom',
                     'fromUid': message.get('fromUid'),
+                    'connFromUid': message.get('connFromUid'),
+                    'connToUid': message.get('connToUid'),
                     'offer': message.get('offer'),
                 }))
 
@@ -40,6 +57,8 @@ async def RTCServer(websocket, path):
                 .send(json.dumps({
                     'type': 'answerFrom',
                     'fromUid': message.get('fromUid'),
+                    'connFromUid': message.get('connFromUid'),
+                    'connToUid': message.get('connToUid'),
                     'answer': message.get('answer'),
                 }))
 
@@ -48,20 +67,12 @@ async def RTCServer(websocket, path):
                 .send(json.dumps({
                     'type': 'iceCandidateFrom',
                     'fromUid': message.get('fromUid'),
+                    'connFromUid': message.get('connFromUid'),
                     'iceCandidate': message.get('iceCandidate'),
                 }))
 
         elif message['type'] == 'channelClose':
-            if connections[path][message.get('uid')]:
-                await connections[path][message['uid']].close()
-                del connections[path][message['uid']]
-                for key, ws in connections[path].items():
-                    await ws.send(json.dumps({
-                        'type': 'channelClose',
-                        'uid': message['uid'],
-                    }))
-                if len(connections[path]) == 0:
-                    del connections[path]
+            await channelClose()
 
 start_server = websockets.serve(RTCServer, '0.0.0.0', 8765)
 

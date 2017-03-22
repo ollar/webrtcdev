@@ -47,8 +47,8 @@ const servers = {
 
 class RTCPConnect {
   constructor(connectionId) {
-    this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
-    // this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+    // this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
 
     this.uid = uuid();
 

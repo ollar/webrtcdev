@@ -1,8 +1,9 @@
 const HistoryCollection = require('../collections/history');
-
 const Sync = require('../sync');
-
 const pageIsVisible = require('../utils').pageIsVisible;
+const textTemplate = require('../templates/textMessage.html');
+const fileTemplate = require('../templates/fileMessage.html');
+
 
 class MainView extends Backbone.View {
   constructor(options) {
@@ -87,7 +88,7 @@ class MainView extends Backbone.View {
 
     switch (messageModel.get('type')) {
       case 'text':
-        message = _.template('<li class="<%= className %>"><%= text %></li>');
+        message = _.template(textTemplate);
         _m.innerHTML = message({
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
           text: messageModel.get('data'),
@@ -97,11 +98,7 @@ class MainView extends Backbone.View {
         break;
 
       case 'file':
-        message = _.template('<li class="<%= className %>">' +
-          '<a class="<%= className %>" download="<%= fileDescription.name %>" href="<%= url %>">' +
-            'Received file "<%= fileDescription.name %>" (<%= fileDescription.size %>)' +
-          '</a>' +
-        '</li>');
+        message = _.template(fileTemplate);
         _m.innerHTML = message({
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
           url: messageModel.get('data'),

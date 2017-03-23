@@ -30,6 +30,11 @@ module.exports = function(env) {
           },
         },
         { test: /backbone\.js$/, loader: 'imports-loader?define=>false' },
+        {
+          test: /\.html$/,
+          include: /src\/templates/,
+          loader: 'html-loader',
+        },
       ],
     },
     watch: env === 'dev',

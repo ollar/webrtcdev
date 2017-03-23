@@ -3,7 +3,7 @@ const Sync = require('../sync');
 const pageIsVisible = require('../utils').pageIsVisible;
 const textTemplate = require('../templates/textMessage.html');
 const fileTemplate = require('../templates/fileMessage.html');
-
+var linkifyStr = require('linkifyjs/string');
 
 class MainView extends Backbone.View {
   constructor(options) {
@@ -91,7 +91,7 @@ class MainView extends Backbone.View {
         message = _.template(textTemplate);
         _m.innerHTML = message({
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
-          text: messageModel.get('data'),
+          text: linkifyStr(messageModel.get('data')),
         });
         if (!messageModel.get('outgoing'))
           this.showNotification(messageModel.get('data'));

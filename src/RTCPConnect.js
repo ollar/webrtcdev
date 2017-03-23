@@ -231,10 +231,29 @@ class RTCPConnect {
   }
 
   _bindChannelEvents(channel) {
+    channel.onopen = () => this._onSendChannelStateChange(channel);
+    channel.onclose = () => this._onSendChannelStateChange(channel);
+
     channel.onmessage = (event) => {
       if (typeof event.data === 'string') {
         if (event.data.indexOf('__fileDescription') > -1) {
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
+
+        } else if (event.data.indexOf('__fileTransferComplete') > -1) {
+          if (channel._receiveBuffer) {
+            var received = new window.Blob(channel._receiveBuffer, {type: channel.__fileDescription.type});
+            var href = URL.createObjectURL(received);
+
+            this.messageHistoryUpdate({
+              type: 'file',
+              data: href,
+              __fileDescription: channel.__fileDescription || {},
+              outgoing: false,
+            });
+
+            let _filePeer = JSON.parse(event.data.split('::')[1]).connFromUid;
+            this.dropConnection(_filePeer);
+          }
         } else {
           this.messageHistoryUpdate({
             type: 'text',
@@ -246,10 +265,7 @@ class RTCPConnect {
         event.target._receiveBuffer = event.target._receiveBuffer || [];
         event.target._receiveBuffer.push(event.data);
       }
-
     };
-    channel.onopen = () => this._onSendChannelStateChange(channel);
-    channel.onclose = () => this._onSendChannelStateChange(channel);
   }
 
   _onSendChannelStateChange(channel) {
@@ -258,18 +274,6 @@ class RTCPConnect {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen');
     } else if (channel.readyState === 'closed') {
-      if (channel._receiveBuffer) {
-        var received = new window.Blob(channel._receiveBuffer, {type: channel.__fileDescription.type});
-        var href = URL.createObjectURL(received);
-
-        this.messageHistoryUpdate({
-          type: 'file',
-          data: href,
-          __fileDescription: channel.__fileDescription || {},
-          outgoing: false,
-        });
-      }
-
       if (_.size(this.peers) === 0)
         Sync.trigger('channelClose');
     }
@@ -283,10 +287,18 @@ class RTCPConnect {
     const connection = this.peers[uid].connection;
     const channel = this.peers[uid].channel;
 
-    if (channel) channel.close();
-    if (connection) connection.close();
+    setTimeout(() => {
+      if (channel) channel.close();
 
-    delete this.peers[uid];
+      setTimeout(() => {
+        if (connection) connection.close();
+
+        setTimeout(() => {
+          delete this.peers[uid];
+        }, 10);
+      }, 10);
+    }, 10);
+
   }
 
   send(text) {
@@ -323,6 +335,36 @@ class RTCPConnect {
       });
     }
 
+    function sendTransferPrepareInfo() {
+      return _.map(_this.peers, (peer, key) => {
+        if (key.indexOf('_file') > -1 &&
+          peer && peer.channel &&
+          peer.channel.readyState === 'open') {
+            peer.channel.send('__fileDescription::' +
+              _str({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+              })
+            );
+          }
+      });
+    }
+
+    function sendTransferCompleteInfo() {
+      return _.map(_this.peers, (peer, key) => {
+        if (key.indexOf('_file') > -1 &&
+          peer && peer.channel &&
+          peer.channel.readyState === 'open') {
+            peer.channel.send('__fileTransferComplete::' +
+              _str({
+                connFromUid: _this.uid + '_file',
+              })
+            );
+          }
+      });
+    }
+
     function sliceFile(offset) {
       var reader = new window.FileReader();
       reader.onload = (function() {
@@ -343,7 +385,10 @@ class RTCPConnect {
               data: `Sent file "${file.name}" (${file.size})`,
               outgoing: true,
             });
-            closeFileConnections();
+
+            sendTransferCompleteInfo();
+
+            setTimeout(() => closeFileConnections(), 10);
           }
           // sendProgress.value = offset + e.target.result.byteLength;
         };
@@ -363,30 +408,8 @@ class RTCPConnect {
 
     createFileConnections();
 
-    // _.map(_this.peers, (peer) => {
-    //   if (peer && peer.channelfile && peer.channelfile.readyState === 'open') peer.channelfile.send('__fileDescription::' +
-    //     _str({
-    //       name: file.name,
-    //       size: file.size,
-    //       type: file.type,
-    //     }));
-    // });
-
     setTimeout(function() {
-      _.map(_this.peers, (peer, key) => {
-        if (key.indexOf('_file') > -1 &&
-          peer && peer.channel &&
-          peer.channel.readyState === 'open') {
-            peer.channel.send('__fileDescription::' +
-              _str({
-                name: file.name,
-                size: file.size,
-                type: file.type,
-              })
-            );
-          }
-      });
-
+      sendTransferPrepareInfo();
 
       sliceFile(0);
     }, 1000);

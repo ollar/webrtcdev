@@ -92,7 +92,8 @@ class MainView extends Backbone.View {
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
           text: messageModel.get('data'),
         });
-        this.showNotification(messageModel.get('data'));
+        if (!messageModel.get('outgoing'))
+          this.showNotification(messageModel.get('data'));
         break;
 
       case 'file':
@@ -106,7 +107,8 @@ class MainView extends Backbone.View {
           url: messageModel.get('data'),
           fileDescription: messageModel.get('__fileDescription'),
         });
-        this.showNotification('Hooray! you\'ve received a file!');
+        if (!messageModel.get('outgoing'))
+          this.showNotification('Hooray! you\'ve received a file!');
         break;
 
       default:

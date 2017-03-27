@@ -67,12 +67,12 @@ class MainView extends Backbone.View {
   }
 
   showNotification(text) {
-    if (this.requestNotificationsPermission() && !pageIsVisible()) {
-      let notification = new Notification('WebRTC', {
-        icon: 'http://lorempixel.com/50/50/',
-        body: text,
-      });
-    }
+    // if (this.requestNotificationsPermission() && !pageIsVisible()) {
+    //   let notification = new Notification('WebRTC', {
+    //     icon: 'http://lorempixel.com/50/50/',
+    //     body: text,
+    //   });
+    // }
   }
 
   submitForm(e) {

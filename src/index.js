@@ -2,6 +2,7 @@ const RTCPConnect = require('./RTCPConnect');
 const uuid = require('./utils').uuid;
 const MainView = require('./views/main');
 const Sync = require('./sync');
+const App = require('./app');
 
 const Router = Backbone.Router.extend({
   routes: {
@@ -14,19 +15,13 @@ const Router = Backbone.Router.extend({
   },
 
   main: function(connectionId) {
-    const connection = new RTCPConnect(connectionId);
+    App.init(connectionId);
     const mainView = new MainView({
       el: '#app',
       connectionId: connectionId,
     });
-
-    window.onunload = function() {
-      Sync.trigger('channelCloseWS', connection.uid);
-      return null;
-    };
   },
 });
 
 new Router();
-
 Backbone.history.start();

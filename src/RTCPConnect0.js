@@ -47,6 +47,9 @@ const servers = {
 
 class RTCPConnect {
   constructor(connectionId) {
+    // this.ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    this.ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+
     this.uid = uuid();
 
     this.peers = {};
@@ -56,6 +59,63 @@ class RTCPConnect {
     this.connectionId = connectionId;
     this.pcConstraint = null;
     this.dataConstraint = null;
+
+    Sync.on('sendMessage', this.send, this);
+    Sync.on('sendFile', this.sendFile, this);
+
+    Sync.on('channelClose', (uid) => {
+      trace(`Channel close ${uid}`);
+    });
+
+    Sync.on('channelCloseWS', (uid) => {
+      this.ws.send(_str({
+        type: 'channelClose',
+        uid: uid || this.uid,
+      }));
+    });
+
+    this.ws.onopen = () => {
+      this.enterRoom();
+    }
+
+    this.ws.onmessage = (event) => {
+      let message = JSON.parse(event.data);
+
+      switch (message.type) {
+        case 'newUser':
+          let uid = message.uid
+          // someone entered room
+          // we create connection with him
+          this.createConnection(uid);
+          // create channels
+          this.createChannel(uid);
+          // send offer
+          this.createOffer(uid);
+          break;
+
+        case 'offerFrom':
+          this.handleOffer(message);
+          break;
+
+        case 'answerFrom':
+          this.handleAnswer(message);
+          break;
+
+        case 'iceCandidateFrom':
+          this.handleIceCandidate(message);
+          break;
+
+        case 'channelClose':
+          this.dropConnection(message.uid)
+      }
+    }
+  }
+
+  enterRoom() {
+    this.ws.send(_str({
+      type: 'enterRoom',
+      uid: this.uid,
+    }));
   }
 
   createConnection(uid, connFromUid = this.uid, connToUid = uid) {
@@ -97,7 +157,7 @@ class RTCPConnect {
     connection.createOffer().then(
       (offer) => {
         connection.setLocalDescription(offer);
-        Sync.trigger('ws:send', _str({
+        this.ws.send(_str({
           type: 'offer',
           fromUid: this.uid,
           toUid: uid,
@@ -122,7 +182,7 @@ class RTCPConnect {
     _connection.createAnswer().then(
       (answer) => {
         _connection.setLocalDescription(answer);
-        Sync.trigger('ws:send', _str({
+        this.ws.send(_str({
           type: 'answer',
           fromUid: this.uid,
           toUid: message.fromUid,
@@ -150,7 +210,7 @@ class RTCPConnect {
   _onIceCandidate(event, uid, connFromUid, connToUid) {
     trace('local ice callback');
     if (event.candidate) {
-      Sync.trigger('ws:send', _str({
+      this.ws.send(_str({
         type: 'iceCandidate',
         fromUid: this.uid,
         toUid: uid,
@@ -181,11 +241,10 @@ class RTCPConnect {
 
         } else if (event.data.indexOf('__fileTransferComplete') > -1) {
           if (channel._receiveBuffer) {
-            console.log(channel.__fileDescription);
             var received = new window.Blob(channel._receiveBuffer, {type: channel.__fileDescription.type});
             var href = URL.createObjectURL(received);
 
-            Sync.trigger('message', {
+            this.messageHistoryUpdate({
               type: 'file',
               data: href,
               __fileDescription: channel.__fileDescription || {},
@@ -196,7 +255,7 @@ class RTCPConnect {
             this.dropConnection(_filePeer);
           }
         } else {
-          Sync.trigger('message', {
+          this.messageHistoryUpdate({
             type: 'text',
             data: event.data,
             outgoing: false,
@@ -213,7 +272,7 @@ class RTCPConnect {
     trace('Send channel state is: ' + channel.readyState);
 
     if (channel.readyState === 'open') {
-      Sync.trigger('channelOpen', channel);
+      Sync.trigger('channelOpen');
     } else if (channel.readyState === 'closed') {
       if (_.size(this.peers) === 0)
         Sync.trigger('channelClose');
@@ -240,6 +299,120 @@ class RTCPConnect {
       }, 10);
     }, 10);
 
+  }
+
+  send(text) {
+    _.map(this.peers, (peer) => {
+      if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
+    });
+    this.messageHistoryUpdate({
+      type: 'text',
+      data: text,
+      outgoing: true,
+    });
+  }
+
+  messageHistoryUpdate(data) {
+    Sync.trigger('message', data);
+  }
+
+  sendFile(file) {
+    var chunkSize = 16384;
+    var _this = this;
+
+    function createFileConnections() {
+      _.map(_this.peers, (peers, key) => {
+        _this.createConnection(key, _this.uid + '_file', key + '_file');
+        _this.createChannel(key + '_file');
+        _this.createOffer(key, _this.uid + '_file', key + '_file');
+      });
+    }
+
+    function closeFileConnections() {
+      _.map(_this.peers, (peer, key) => {
+        if (key.indexOf('_file') > -1)
+          _this.dropConnection(key);
+      });
+    }
+
+    function sendTransferPrepareInfo() {
+      return _.map(_this.peers, (peer, key) => {
+        if (key.indexOf('_file') > -1 &&
+          peer && peer.channel &&
+          peer.channel.readyState === 'open') {
+            peer.channel.send('__fileDescription::' +
+              _str({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+              })
+            );
+          }
+      });
+    }
+
+    function sendTransferCompleteInfo() {
+      return _.map(_this.peers, (peer, key) => {
+        if (key.indexOf('_file') > -1 &&
+          peer && peer.channel &&
+          peer.channel.readyState === 'open') {
+            peer.channel.send('__fileTransferComplete::' +
+              _str({
+                connFromUid: _this.uid + '_file',
+              })
+            );
+          }
+      });
+    }
+
+    function sliceFile(offset) {
+      var reader = new window.FileReader();
+      reader.onload = (function() {
+        return function(e) {
+          _.map(_this.peers, (peer, key) => {
+            if (key.indexOf('_file') > -1 &&
+              peer && peer.channel &&
+              peer.channel.readyState === 'open') {
+                peer.channel.send(e.target.result);
+              }
+          });
+
+          if (file.size > offset + e.target.result.byteLength) {
+            setTimeout(sliceFile, 0, offset + chunkSize);
+          } else {
+            _this.messageHistoryUpdate({
+              type: 'text',
+              data: `Sent file "${file.name}" (${file.size})`,
+              outgoing: true,
+            });
+
+            sendTransferCompleteInfo();
+
+            setTimeout(() => closeFileConnections(), 10);
+          }
+          // sendProgress.value = offset + e.target.result.byteLength;
+        };
+      })(file);
+      var slice = file.slice(offset, offset + chunkSize);
+      reader.readAsArrayBuffer(slice);
+    }
+
+    trace('File is ' + [file.name, file.size, file.type,
+      file.lastModifiedDate
+    ].join(' '));
+
+    if (file.size === 0) {
+      console.log('File is empty, please select a non-empty file');
+      return;
+    }
+
+    createFileConnections();
+
+    setTimeout(function() {
+      sendTransferPrepareInfo();
+
+      sliceFile(0);
+    }, 1000);
   }
 }
 

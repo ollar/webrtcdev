@@ -32,9 +32,23 @@ function pageIsVisible() {
   return !document[hidden];
 }
 
+function pageOnVisibilityChange() {
+  var visibilityChange;
+  if (typeof document.hidden !== "undefined") { // Opera 12.10 and Firefox 18 and later support
+    visibilityChange = "visibilitychange";
+  } else if (typeof document.msHidden !== "undefined") {
+    visibilityChange = "msvisibilitychange";
+  } else if (typeof document.webkitHidden !== "undefined") {
+    visibilityChange = "webkitvisibilitychange";
+  }
+
+  return visibilityChange;
+}
+
 module.exports = {
   trace,
   uuid,
   _str,
   pageIsVisible,
+  pageOnVisibilityChange,
 }

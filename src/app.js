@@ -96,7 +96,7 @@ var App = (function() {
 
   /**
    * sendFile function
-   * @param  {[type]} file - file to send
+   * @param  {Blob} file - file to send
    */
   function sendFile(file) {
     var chunkSize = 16384;

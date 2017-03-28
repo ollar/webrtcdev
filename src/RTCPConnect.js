@@ -45,77 +45,77 @@ const servers = {
   ]
 };
 
-class RTCPConnect {
-  constructor(connectionId) {
-    this.uid = uuid();
+var RTCPConnect = (function() {
+  var uid = uuid();
+  var peers = {};
+  var pcConstraint = null;
+  var dataConstraint = null;
+  var connectionId;
 
-    this.peers = {};
-    window.peers = this.peers;
-    window.uid = this.uid;
+  function init(cId) {
+    window.peers = peers;
+    window.uid = uid;
 
-    this.connectionId = connectionId;
-    this.pcConstraint = null;
-    this.dataConstraint = null;
+    connectionId = cId;
   }
 
-  createConnection(uid, connFromUid = this.uid, connToUid = uid) {
+  function createConnection(toUid, connFromUid = uid, connToUid = toUid) {
     trace('Using SCTP based data channels');
-    const connection = new RTCPeerConnection(servers, this.pcConstraint);
+    const connection = new RTCPeerConnection(servers, pcConstraint);
 
     connection.ondatachannel = (event) =>
-      this._receiveChannelCallback(event, connToUid);
+      _receiveChannelCallback(event, connToUid);
 
-    if (this.uid !== connToUid) {
+    if (uid !== connToUid) {
       connection.onicecandidate = (event) =>
-        this._onIceCandidate(event, uid, connFromUid, connToUid);
+        _onIceCandidate(event, toUid, connFromUid, connToUid);
     }
 
-    this.peers[connToUid] = {};
-    this.peers[connToUid].connection = connection;
-    console.log(this.peers);
+    peers[connToUid] = {};
+    peers[connToUid].connection = connection;
+    console.log(peers);
 
     trace('Created local peer connection object localConnection');
     return connection;
   }
 
-  createChannel(uid) {
-    const connection = this.peers[uid].connection;
-    const channel = connection.createDataChannel(this.connectionId,
-      this.dataConstraint);
-    trace(`Created send data channel with id: ${this.connectionId}`);
+  function createChannel(toUid) {
+    const connection = peers[toUid].connection;
+    const channel = connection.createDataChannel(connectionId, dataConstraint);
+    trace(`Created send data channel with id: ${connectionId}`);
 
-    this.peers[uid].channel = channel;
+    peers[toUid].channel = channel;
 
-    this._bindChannelEvents(channel);
+    _bindChannelEvents(channel);
 
     return channel;
   }
 
-  createOffer(uid, connFromUid = this.uid, connToUid = uid) {
-    const connection = this.peers[connToUid].connection;
+  function createOffer(toUid, connFromUid = uid, connToUid = toUid) {
+    const connection = peers[connToUid].connection;
 
     connection.createOffer().then(
       (offer) => {
         connection.setLocalDescription(offer);
         Sync.trigger('ws:send', _str({
           type: 'offer',
-          fromUid: this.uid,
-          toUid: uid,
+          fromUid: uid,
+          toUid: toUid,
           connFromUid: connFromUid,
           connToUid: connToUid,
           offer: _str(offer.toJSON()),
         }));
       },
-      this._onCreateSessionDescriptionError
+      _onCreateSessionDescriptionError
     );
   }
 
-  handleOffer(message) {
+  function handleOffer(message) {
     let offer = new RTCSessionDescription(JSON.parse(message.offer));
 
-    let _connection = this.createConnection(message.fromUid,
+    let _connection = createConnection(message.fromUid,
       message.connToUid, message.connFromUid);
-    this.createChannel(message.connFromUid);
+    createChannel(message.connFromUid);
 
     _connection.setRemoteDescription(offer);
 
@@ -124,36 +124,36 @@ class RTCPConnect {
         _connection.setLocalDescription(answer);
         Sync.trigger('ws:send', _str({
           type: 'answer',
-          fromUid: this.uid,
+          fromUid: uid,
           toUid: message.fromUid,
           connFromUid: message.connToUid,
           connToUid: message.connFromUid,
           answer: _str(answer.toJSON()),
         }));
       },
-      this._onCreateSessionDescriptionError
+      _onCreateSessionDescriptionError
     );
   }
 
-  handleAnswer(message) {
-    const connection = this.peers[message.connFromUid].connection;
+  function handleAnswer(message) {
+    const connection = peers[message.connFromUid].connection;
 
     let answer = new RTCSessionDescription(JSON.parse(message.answer));
     connection.setRemoteDescription(answer);
   }
 
-  handleIceCandidate(message) {
-    const connection = this.peers[message.connFromUid].connection;
+  function handleIceCandidate(message) {
+    const connection = peers[message.connFromUid].connection;
     connection.addIceCandidate(new RTCIceCandidate(JSON.parse(message.iceCandidate)));
   }
 
-  _onIceCandidate(event, uid, connFromUid, connToUid) {
+  function _onIceCandidate(event, toUid, connFromUid, connToUid) {
     trace('local ice callback');
     if (event.candidate) {
       Sync.trigger('ws:send', _str({
         type: 'iceCandidate',
-        fromUid: this.uid,
-        toUid: uid,
+        fromUid: uid,
+        toUid: toUid,
         connFromUid: connFromUid,
         connToUid: connToUid,
         iceCandidate: _str(event.candidate.toJSON()),
@@ -161,18 +161,18 @@ class RTCPConnect {
     }
   }
 
-  _receiveChannelCallback(event, uid) {
+  function _receiveChannelCallback(event, toUid) {
     trace('Receive Channel Callback');
     const channel = event.channel;
 
-    this.peers[uid].channel = channel;
+    peers[toUid].channel = channel;
 
-    this._bindChannelEvents(channel);
+    _bindChannelEvents(channel);
   }
 
-  _bindChannelEvents(channel) {
-    channel.onopen = () => this._onSendChannelStateChange(channel);
-    channel.onclose = () => this._onSendChannelStateChange(channel);
+  function _bindChannelEvents(channel) {
+    channel.onopen = () => _onSendChannelStateChange(channel);
+    channel.onclose = () => _onSendChannelStateChange(channel);
 
     channel.onmessage = (event) => {
       if (typeof event.data === 'string') {
@@ -193,7 +193,7 @@ class RTCPConnect {
             });
 
             let _filePeer = JSON.parse(event.data.split('::')[1]).connFromUid;
-            this.dropConnection(_filePeer);
+            dropConnection(_filePeer);
           }
         } else {
           Sync.trigger('message', {
@@ -209,24 +209,24 @@ class RTCPConnect {
     };
   }
 
-  _onSendChannelStateChange(channel) {
+  function _onSendChannelStateChange(channel) {
     trace('Send channel state is: ' + channel.readyState);
 
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen', channel);
     } else if (channel.readyState === 'closed') {
-      if (_.size(this.peers) === 0)
+      if (_.size(peers) === 0)
         Sync.trigger('channelClose');
     }
   }
 
-  _onCreateSessionDescriptionError(error) {
+  function _onCreateSessionDescriptionError(error) {
     trace('Failed to create session description: ' + error.toString());
   }
 
-  dropConnection(uid) {
-    const connection = this.peers[uid].connection;
-    const channel = this.peers[uid].channel;
+  function dropConnection(uid) {
+    const connection = peers[uid].connection;
+    const channel = peers[uid].channel;
 
     setTimeout(() => {
       if (channel) channel.close();
@@ -235,12 +235,28 @@ class RTCPConnect {
         if (connection) connection.close();
 
         setTimeout(() => {
-          delete this.peers[uid];
+          delete peers[uid];
         }, 10);
       }, 10);
     }, 10);
-
   }
-}
+
+  return {
+    init: init,
+    createConnection: createConnection,
+    createChannel: createChannel,
+    createOffer: createOffer,
+    handleOffer: handleOffer,
+    handleAnswer: handleAnswer,
+    handleIceCandidate: handleIceCandidate,
+    dropConnection: dropConnection,
+    getUid: function() {
+      return uid;
+    },
+    getPeers: function() {
+      return peers;
+    },
+  };
+})();
 
 module.exports = RTCPConnect;

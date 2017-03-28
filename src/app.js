@@ -5,12 +5,12 @@ const trace = require('./utils').trace;
 
 var App = (function() {
   var ws;
-  var wrtc;
 
   function init(connectionId) {
     ws = new WebSocket('ws://localhost:8765/' + connectionId);
     // ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
-    wrtc = new WebRTC(connectionId);
+    WebRTC.init(connectionId);
+
     ws.onopen = () => enterRoom();
 
     Sync.on('sendMessage', send);
@@ -23,7 +23,7 @@ var App = (function() {
     Sync.on('channelCloseWS', (uid) => {
       ws.send(_str({
         type: 'channelClose',
-        uid: uid || wrtc.uid,
+        uid: uid || WebRTC.getUid(),
       }));
     });
 
@@ -37,32 +37,32 @@ var App = (function() {
           let uid = message.uid
           // someone entered room
           // we create connection with him
-          wrtc.createConnection(uid);
+          WebRTC.createConnection(uid);
           // create channels
-          wrtc.createChannel(uid);
+          WebRTC.createChannel(uid);
           // send offer
-          wrtc.createOffer(uid);
+          WebRTC.createOffer(uid);
           break;
 
         case 'offerFrom':
-          wrtc.handleOffer(message);
+          WebRTC.handleOffer(message);
           break;
 
         case 'answerFrom':
-          wrtc.handleAnswer(message);
+          WebRTC.handleAnswer(message);
           break;
 
         case 'iceCandidateFrom':
-          wrtc.handleIceCandidate(message);
+          WebRTC.handleIceCandidate(message);
           break;
 
         case 'channelClose':
-          wrtc.dropConnection(message.uid)
+          WebRTC.dropConnection(message.uid)
       }
     }
 
     window.onunload = function() {
-      Sync.trigger('channelCloseWS', wrtc.uid);
+      Sync.trigger('channelCloseWS', WebRTC.getUid());
       return null;
     };
   }
@@ -74,12 +74,12 @@ var App = (function() {
   function enterRoom() {
     ws.send(_str({
       type: 'enterRoom',
-      uid: wrtc.uid,
+      uid: WebRTC.getUid(),
     }));
   }
 
   function send(text) {
-    _.map(wrtc.peers, (peer) => {
+    _.map(WebRTC.getPeers(), (peer) => {
       if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
     });
 
@@ -94,28 +94,32 @@ var App = (function() {
     Sync.trigger('message', data);
   }
 
+  /**
+   * sendFile function
+   * @param  {[type]} file - file to send
+   */
   function sendFile(file) {
     var chunkSize = 16384;
 
     function createFileConnections(cb) {
-      _.map(wrtc.peers, (peers, key) => {
-        wrtc.createConnection(key, wrtc.uid + '_file', key + '_file');
-        var channel = wrtc.createChannel(key + '_file');
-        wrtc.createOffer(key, wrtc.uid + '_file', key + '_file');
+      _.map(WebRTC.getPeers(), (peers, key) => {
+        WebRTC.createConnection(key, WebRTC.getUid() + '_file', key + '_file');
+        var channel = WebRTC.createChannel(key + '_file');
+        WebRTC.createOffer(key, WebRTC.getUid() + '_file', key + '_file');
 
         channel.addEventListener('open', cb);
       });
     }
 
     function closeFileConnections() {
-      _.map(wrtc.peers, (peer, key) => {
+      _.map(WebRTC.getPeers(), (peer, key) => {
         if (key.indexOf('_file') > -1)
-          wrtc.dropConnection(key);
+          WebRTC.dropConnection(key);
       });
     }
 
     function sendTransferPrepareInfo() {
-      return _.map(wrtc.peers, (peer, key) => {
+      return _.map(WebRTC.getPeers(), (peer, key) => {
         if (key.indexOf('_file') > -1 &&
           peer && peer.channel &&
           peer.channel.readyState === 'open') {
@@ -131,13 +135,13 @@ var App = (function() {
     }
 
     function sendTransferCompleteInfo() {
-      return _.map(wrtc.peers, (peer, key) => {
+      return _.map(WebRTC.getPeers(), (peer, key) => {
         if (key.indexOf('_file') > -1 &&
           peer && peer.channel &&
           peer.channel.readyState === 'open') {
             peer.channel.send('__fileTransferComplete::' +
               _str({
-                connFromUid: wrtc.uid + '_file',
+                connFromUid: WebRTC.getUid() + '_file',
               })
             );
           }
@@ -148,7 +152,7 @@ var App = (function() {
       var reader = new window.FileReader();
       reader.onload = (function() {
         return function(e) {
-          _.map(wrtc.peers, (peer, key) => {
+          _.map(WebRTC.getPeers(), (peer, key) => {
             if (key.indexOf('_file') > -1 &&
               peer && peer.channel &&
               peer.channel.readyState === 'open') {

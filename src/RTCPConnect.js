@@ -139,6 +139,7 @@ var RTCPConnect = (function() {
   function handleOffer(message) {
     let offer = new RTCSessionDescription(JSON.parse(message.offer));
 
+    // need to switch UIDs here
     let _connection = createConnection(message.fromUid,
       message.connToUid, message.connFromUid);
     createChannel(message.connFromUid);

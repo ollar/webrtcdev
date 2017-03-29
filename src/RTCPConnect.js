@@ -52,6 +52,10 @@ var RTCPConnect = (function() {
   var dataConstraint = null;
   var connectionId;
 
+  /**
+   * Initialize function
+   * @param  {String} cId - connection ID
+   */
   function init(cId) {
     window.peers = peers;
     window.uid = uid;
@@ -59,6 +63,13 @@ var RTCPConnect = (function() {
     connectionId = cId;
   }
 
+  /**
+   * Create new connection.
+   * @param  {String} toUid             recipient uid stored on server
+   * @param  {String} [connFromUid=uid] sender connection uid
+   * @param  {String} [connToUid=toUid] recipient connection uid
+   * @return {RTCPeerConnection}        new PeerConnection
+   */
   function createConnection(toUid, connFromUid = uid, connToUid = toUid) {
     trace('Using SCTP based data channels');
     const connection = new RTCPeerConnection(servers, pcConstraint);
@@ -79,6 +90,11 @@ var RTCPConnect = (function() {
     return connection;
   }
 
+  /**
+   * Create new channel
+   * @param  {String} toUid   recipient uid
+   * @return {RTCDataChannel} new data channel
+   */
   function createChannel(toUid) {
     const connection = peers[toUid].connection;
     const channel = connection.createDataChannel(connectionId, dataConstraint);
@@ -91,6 +107,12 @@ var RTCPConnect = (function() {
     return channel;
   }
 
+  /**
+   * Create RTCOffer
+   * @param  {String} toUid             recipient uid stored on server
+   * @param  {String} [connFromUid=uid] sender connection uid
+   * @param  {String} [connToUid=toUid] recipient connection uid
+   */
   function createOffer(toUid, connFromUid = uid, connToUid = toUid) {
     const connection = peers[connToUid].connection;
 
@@ -110,6 +132,10 @@ var RTCPConnect = (function() {
     );
   }
 
+  /**
+   * Handle offer
+   * @param  {Object} message - offer message
+   */
   function handleOffer(message) {
     let offer = new RTCSessionDescription(JSON.parse(message.offer));
 
@@ -135,6 +161,10 @@ var RTCPConnect = (function() {
     );
   }
 
+  /**
+   * Answer handler
+   * @param  {Object} message answer message
+   */
   function handleAnswer(message) {
     const connection = peers[message.connFromUid].connection;
 
@@ -147,6 +177,13 @@ var RTCPConnect = (function() {
     connection.addIceCandidate(new RTCIceCandidate(JSON.parse(message.iceCandidate)));
   }
 
+  /**
+   * Handle local ice candidate
+   * @param  {Event} event        iceCandidate event
+   * @param  {String} toUid       recipient uid stored on server
+   * @param  {String} connFromUid sender connection uid
+   * @param  {String} connToUid   recipient connection uid
+   */
   function _onIceCandidate(event, toUid, connFromUid, connToUid) {
     trace('local ice callback');
     if (event.candidate) {
@@ -161,15 +198,26 @@ var RTCPConnect = (function() {
     }
   }
 
+  /**
+   * channel callback handler
+   * @param  {Event} event  channel event
+   * @param  {String} toUid recipient connection uid stored on server
+   */
   function _receiveChannelCallback(event, toUid) {
     trace('Receive Channel Callback');
     const channel = event.channel;
 
     peers[toUid].channel = channel;
 
+    console.log(toUid);
+
     _bindChannelEvents(channel);
   }
 
+  /**
+   * Bind channel events helper function
+   * @param  {RTCDataChannel} channel RTC data channel
+   */
   function _bindChannelEvents(channel) {
     channel.onopen = () => _onSendChannelStateChange(channel);
     channel.onclose = () => _onSendChannelStateChange(channel);
@@ -178,11 +226,15 @@ var RTCPConnect = (function() {
       if (typeof event.data === 'string') {
         if (event.data.indexOf('__fileDescription') > -1) {
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
-
+          trace(1);
+          trace(event.target);
         } else if (event.data.indexOf('__fileTransferComplete') > -1) {
-          if (channel._receiveBuffer) {
-            console.log(channel.__fileDescription);
-            var received = new window.Blob(channel._receiveBuffer, {type: channel.__fileDescription.type});
+          if (event.target._receiveBuffer) {
+            trace(2);
+            trace(event.target);
+            trace(event.target.__fileDescription);
+            trace(peers);
+            var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.type});
             var href = URL.createObjectURL(received);
 
             Sync.trigger('message', {
@@ -209,6 +261,10 @@ var RTCPConnect = (function() {
     };
   }
 
+  /**
+   * channel state change handler
+   * @param  {RTCDataChannel} channel RTCDataChannel
+   */
   function _onSendChannelStateChange(channel) {
     trace('Send channel state is: ' + channel.readyState);
 
@@ -220,13 +276,21 @@ var RTCPConnect = (function() {
     }
   }
 
+  /**
+   * _onCreateSessionDescriptionError helper function
+   * @param  {Error} error Error
+   */
   function _onCreateSessionDescriptionError(error) {
     trace('Failed to create session description: ' + error.toString());
   }
 
-  function dropConnection(uid) {
-    const connection = peers[uid].connection;
-    const channel = peers[uid].channel;
+  /**
+   * Drop connection.
+   * @param  {String} toUid connection uid
+   */
+  function dropConnection(toUid) {
+    const connection = peers[toUid].connection;
+    const channel = peers[toUid].channel;
 
     setTimeout(() => {
       if (channel) channel.close();
@@ -235,7 +299,7 @@ var RTCPConnect = (function() {
         if (connection) connection.close();
 
         setTimeout(() => {
-          delete peers[uid];
+          delete peers[toUid];
         }, 10);
       }, 10);
     }, 10);

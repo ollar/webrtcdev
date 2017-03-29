@@ -6,6 +6,10 @@ const trace = require('./utils').trace;
 var App = (function() {
   var ws;
 
+  /**
+   * init function
+   * @param  {String} connectionId connection UID
+   */
   function init(connectionId) {
     ws = new WebSocket('ws://localhost:8765/' + connectionId);
     // ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
@@ -67,10 +71,17 @@ var App = (function() {
     };
   }
 
+  /**
+   * send messages to signaling server
+   * @param  {String} msg message
+   */
   function sendWsMessage(msg) {
     return ws.send(msg);
   }
 
+  /**
+   * Enter a room
+   */
   function enterRoom() {
     ws.send(_str({
       type: 'enterRoom',
@@ -78,6 +89,10 @@ var App = (function() {
     }));
   }
 
+  /**
+   * Send message via RTC
+   * @param  {String} text message body
+   */
   function send(text) {
     _.map(WebRTC.getPeers(), (peer) => {
       if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
@@ -90,6 +105,10 @@ var App = (function() {
     });
   }
 
+  /**
+   * Updates chat messages history
+   * @param  {Object} data data to add to messages list
+   */
   function messageHistoryUpdate(data) {
     Sync.trigger('message', data);
   }

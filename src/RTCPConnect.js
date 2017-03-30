@@ -84,7 +84,6 @@ var RTCPConnect = (function() {
 
     peers[connToUid] = {};
     peers[connToUid].connection = connection;
-    console.log(peers);
 
     trace('Created local peer connection object localConnection');
     return connection;
@@ -92,15 +91,15 @@ var RTCPConnect = (function() {
 
   /**
    * Create new channel
-   * @param  {String} toUid   recipient uid
+   * @param  {String} connToUid   recipient connection uid
    * @return {RTCDataChannel} new data channel
    */
-  function createChannel(toUid) {
-    const connection = peers[toUid].connection;
-    const channel = connection.createDataChannel(toUid, dataConstraint);
-    trace(`Created send data channel with id: ${toUid}`);
+  function createChannel(connToUid) {
+    const connection = peers[connToUid].connection;
+    const channel = connection.createDataChannel(connToUid, dataConstraint);
+    trace(`Created send data channel with id: ${connToUid}`);
 
-    peers[toUid].channel = channel;
+    peers[connToUid].channel = channel;
 
     _bindChannelEvents(channel);
 

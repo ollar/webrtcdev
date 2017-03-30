@@ -11,8 +11,8 @@ var App = (function() {
    * @param  {String} connectionId connection UID
    */
   function init(connectionId) {
-    // ws = new WebSocket('ws://localhost:8765/' + connectionId);
-    ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+    ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    // ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
     WebRTC.init(connectionId);
 
     ws.onopen = () => enterRoom();

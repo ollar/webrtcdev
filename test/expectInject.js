@@ -19,8 +19,8 @@ function RTCDataChannel(id) {
 RTCDataChannel.prototype.constructor = RTCDataChannel;
 
 function RTCPeerConnection() {
-  this.ondatachannel = sinon.stub();
-  this.onicecandidate = sinon.stub();
+  this.ondatachannel = sinon.spy();
+  this.onicecandidate = sinon.spy();
   this.createDataChannel = function(connToUid, dataConstraint) {
     return new RTCDataChannel(connToUid);
   };

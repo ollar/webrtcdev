@@ -64,7 +64,7 @@ describe('WebRTC test', function() {
       createConnection('check channels are not same2');
       var channel2 = createChannel('check channels are not same2');
 
-      expect(channel1).not.be(channel2);
+      expect(channel1).not.to.be(channel2);
     });
   });
 });

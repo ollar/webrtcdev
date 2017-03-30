@@ -16,15 +16,17 @@ function RTCDataChannel(id) {
   this.onmessage = sinon.spy();
 }
 
-RTCDataChannel.constructor = RTCDataChannel;
+RTCDataChannel.prototype.constructor = RTCDataChannel;
 
 function RTCPeerConnection() {
   this.ondatachannel = sinon.stub();
   this.onicecandidate = sinon.stub();
-  this.createDataChannel = sinon.stub().returns(new RTCDataChannel());
+  this.createDataChannel = function(connToUid, dataConstraint) {
+    return new RTCDataChannel(connToUid);
+  };
 }
 
-RTCPeerConnection.constructor = RTCPeerConnection;
+RTCPeerConnection.prototype.constructor = RTCPeerConnection;
 
 global.document = jsdom.jsdom('<!doctype html><html><body></body></html>');
 _.extend(global, document.defaultView);

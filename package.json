@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "./node_modules/.bin/mocha",
     "dev": "webpack --env=dev --progress --profile --colors",
     "prod": "webpack --env=prod --progress --profile --colors"
   },
@@ -27,7 +27,11 @@
     "babel-core": "^6.24.0",
     "babel-loader": "^6.4.0",
     "babel-preset-env": "^1.2.1",
+    "expect.js": "^0.3.1",
     "file-loader": "^0.10.1",
-    "html-loader": "^0.4.5"
+    "html-loader": "^0.4.5",
+    "jsdom": "^9.12.0",
+    "mocha": "^3.2.0",
+    "sinon": "^2.1.0"
   }
 }

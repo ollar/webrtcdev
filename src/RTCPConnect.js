@@ -268,8 +268,7 @@ var RTCPConnect = (function() {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen', channel);
     } else if (channel.readyState === 'closed') {
-      if (_.size(peers) === 0)
-        Sync.trigger('channelClose');
+      // if (_.size(peers) === 0) Sync.trigger('channelClose');
     }
   }
 
@@ -297,6 +296,7 @@ var RTCPConnect = (function() {
 
         setTimeout(() => {
           delete peers[toUid];
+          if (_.size(peers) === 0) Sync.trigger('channelClose');
         }, 10);
       }, 10);
     }, 10);

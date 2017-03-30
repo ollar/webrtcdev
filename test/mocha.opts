@@ -1,0 +1,6 @@
+--require ./expectInject.js
+--require underscore
+--require Backbone
+--slow
+--growl
+--ui bdd

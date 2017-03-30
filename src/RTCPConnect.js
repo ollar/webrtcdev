@@ -97,8 +97,8 @@ var RTCPConnect = (function() {
    */
   function createChannel(toUid) {
     const connection = peers[toUid].connection;
-    const channel = connection.createDataChannel(connectionId, dataConstraint);
-    trace(`Created send data channel with id: ${connectionId}`);
+    const channel = connection.createDataChannel(toUid, dataConstraint);
+    trace(`Created send data channel with id: ${toUid}`);
 
     peers[toUid].channel = channel;
 
@@ -227,14 +227,10 @@ var RTCPConnect = (function() {
       if (typeof event.data === 'string') {
         if (event.data.indexOf('__fileDescription') > -1) {
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
-          trace(1);
-          trace(event.target);
+          console.log(1, event.target);
         } else if (event.data.indexOf('__fileTransferComplete') > -1) {
           if (event.target._receiveBuffer) {
-            trace(2);
-            trace(event.target);
-            trace(event.target.__fileDescription);
-            trace(peers);
+            console.log(2, event.target, event.target.__fileDescription, peers);
             var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.type});
             var href = URL.createObjectURL(received);
 

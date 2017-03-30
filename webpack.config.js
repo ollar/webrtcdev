@@ -17,18 +17,18 @@ module.exports = function(env) {
     ],
     module: {
       loaders: [
-        {
-          test: /\.js$/,
-          exclude: /(node_modules|bower_components)/,
-          loader: 'babel-loader',
-          query: {
-            presets: [['env', {
-              targets: {
-                browsers: ["last 2 versions", "safari >= 7"]
-              }
-            }]]
-          },
-        },
+        // {
+        //   test: /\.js$/,
+        //   exclude: /(node_modules|bower_components)/,
+        //   loader: 'babel-loader',
+        //   query: {
+        //     presets: [['env', {
+        //       targets: {
+        //         browsers: ["last 2 versions", "safari >= 7"]
+        //       }
+        //     }]]
+        //   },
+        // },
         { test: /backbone\.js$/, loader: 'imports-loader?define=>false' },
         {
           test: /\.html$/,

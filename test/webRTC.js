@@ -10,8 +10,7 @@ describe('WebRTC test', function() {
 
   describe('createConnection function', function() {
     it('returns RTCPeerConnection', function() {
-      var trace = sinon.stub().returns(false);
-      expect(WebRTC.createConnection()).to.be(undefined);
+      expect(WebRTC.createConnection()).to.be(RTCPeerConnection());
     })
   });
 });

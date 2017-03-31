@@ -11,19 +11,19 @@ var performance = {
 
 function RTCDataChannel(id) {
   this.id = id;
-  this.onopen = sinon.spy();
-  this.onclose = sinon.spy();
-  this.onmessage = sinon.spy();
+  this.close = sinon.spy();
 }
 
 RTCDataChannel.prototype.constructor = RTCDataChannel;
 
 function RTCPeerConnection() {
-  this.ondatachannel = sinon.spy();
-  this.onicecandidate = sinon.spy();
   this.createDataChannel = function(connToUid, dataConstraint) {
     return new RTCDataChannel(connToUid);
   };
+  this.createOffer = sinon.stub().returns(new Promise(() => true));
+
+  this.setLocalDescription = sinon.spy();
+  this.close = sinon.spy();
 }
 
 RTCPeerConnection.prototype.constructor = RTCPeerConnection;

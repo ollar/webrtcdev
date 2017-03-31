@@ -287,18 +287,10 @@ var RTCPConnect = (function() {
     const connection = peers[toUid].connection;
     const channel = peers[toUid].channel;
 
-    setTimeout(() => {
-      if (channel) channel.close();
-
-      setTimeout(() => {
-        if (connection) connection.close();
-
-        setTimeout(() => {
-          delete peers[toUid];
-          if (_.size(peers) === 0) Sync.trigger('channelClose');
-        }, 10);
-      }, 10);
-    }, 10);
+    if (channel) channel.close();
+    if (connection) connection.close();
+    delete peers[toUid];
+    if (_.size(peers) === 0) Sync.trigger('channelClose');
   }
 
   return {

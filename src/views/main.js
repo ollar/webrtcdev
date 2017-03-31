@@ -4,6 +4,7 @@ const pageIsVisible = require('../utils').pageIsVisible;
 const pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
 const textTemplate = require('../templates/textMessage.html');
 const fileTemplate = require('../templates/fileMessage.html');
+const App = require('../app');
 var linkifyStr = require('linkifyjs/string');
 
 class MainView extends Backbone.View {
@@ -97,7 +98,7 @@ class MainView extends Backbone.View {
   submitForm(e) {
     e.preventDefault();
 
-    Sync.trigger('sendMessage', this.textinput.value);
+    App.sendMessage(this.textinput.value);
     this.sendForm.reset();
   }
 
@@ -151,7 +152,7 @@ class MainView extends Backbone.View {
 
   handleDragDrop(e) {
     e.preventDefault();
-    Sync.trigger('sendFile', e.dataTransfer.files[0]);
+    App.sendFile(e.dataTransfer.files[0]);
   }
 }
 

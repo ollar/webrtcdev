@@ -228,8 +228,8 @@ var RTCPConnect = (function() {
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
           console.log(1, event.target);
         } else if (event.data.indexOf('__fileTransferComplete') > -1) {
+          console.log(2, event.target, event.target.__fileDescription, peers);
           if (event.target._receiveBuffer) {
-            console.log(2, event.target, event.target.__fileDescription, peers);
             var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.type});
             var href = URL.createObjectURL(received);
 

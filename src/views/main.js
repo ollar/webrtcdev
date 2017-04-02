@@ -75,7 +75,7 @@ var MainView = Backbone.View.extend({
 
   _updateTitle: function() {
     if (!this.unreadMessages) return document.title = this.title;
-    return document.title = this.title + ' ' + this.unreadMessages;
+    return document.title = this.title + ' (' + this.unreadMessages + ')';
   },
 
   showNotification: function(text) {

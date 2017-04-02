@@ -1,9 +1,7 @@
-const MessageModel = require ('../models/message');
+var MessageModel = require('../models/message');
 
-class HistoryCollection extends Backbone.Collection {
-  get model() {
-    return MessageModel;
-  }
-}
+var HistoryCollection = Backbone.Collection.extend({
+  model: MessageModel,
+});
 
 module.exports = HistoryCollection;

@@ -1,34 +1,32 @@
-const HistoryCollection = require('../collections/history');
-const Sync = require('../sync');
-const pageIsVisible = require('../utils').pageIsVisible;
-const pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
-const textTemplate = require('../templates/textMessage.html');
-const fileTemplate = require('../templates/fileMessage.html');
-const App = require('../app');
+var HistoryCollection = require('../collections/history');
+var Sync = require('../sync');
+var pageIsVisible = require('../utils').pageIsVisible;
+var pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
+var textTemplate = require('../templates/textMessage.html');
+var fileTemplate = require('../templates/fileMessage.html');
+var App = require('../app');
 var linkifyStr = require('linkifyjs/string');
 
-class MainView extends Backbone.View {
-  constructor(options) {
-    super(options);
+var MainView = Backbone.View.extend({
+  initialize: function(options) {
     this.title = document.title;
     this.unreadMessages = 0;
 
     this.collection = new HistoryCollection();
 
-    // this.sendForm = this.$('#sendForm');
     this.sendForm = document.getElementById('sendForm');
     this.messagesList = document.getElementById('messagesList');
     this.textinput = document.getElementById('data');
     this.button = document.getElementById('send');
 
-    this.listenTo(Sync, 'message', (data) => {
+    this.listenTo(Sync, 'message', function(data) {
       return this.collection.add(data);
     }, this);
-    this.listenTo(Sync, 'channelOpen', () => {
+    this.listenTo(Sync, 'channelOpen', function() {
       this.textinput.removeAttribute('disabled');
       this.button.removeAttribute('disabled');
     }, this);
-    this.listenTo(Sync, 'channelClose', () => {
+    this.listenTo(Sync, 'channelClose', function() {
       this.textinput.setAttribute('disabled', 'disabled');
       this.button.setAttribute('disabled', 'disabled');
     }, this);
@@ -36,25 +34,23 @@ class MainView extends Backbone.View {
 
     this.requestNotificationsPermission();
 
-    document.addEventListener(pageOnVisibilityChange(), () => {
+    document.addEventListener(pageOnVisibilityChange(), function() {
       if (pageIsVisible()) {
         this.unreadMessages = 0;
       }
       this._updateTitle();
-    });
-  }
+    }.bind(this));
+  },
 
-  get events() {
-    return {
-      'submit #sendForm': 'submitForm',
-      'dragenter': 'handleDragEnter',
-      'dragover': 'handleDragOver',
-      'dragleave': 'handleDragLeave',
-      'drop': 'handleDragDrop',
-    };
-  }
+  events: {
+    'submit #sendForm': 'submitForm',
+    'dragenter': 'handleDragEnter',
+    'dragover': 'handleDragOver',
+    'dragleave': 'handleDragLeave',
+    'drop': 'handleDragDrop',
+  },
 
-  requestNotificationsPermission() {
+  requestNotificationsPermission: function() {
     if (!window.Notification) {
       console.log('Notifications are not available');
       return;
@@ -65,7 +61,7 @@ class MainView extends Backbone.View {
     }
 
     else if (Notification.permission !== 'denied') {
-      Notification.requestPermission((permission) => {
+      Notification.requestPermission(function(permission) {
         if (permission === "granted") {
           return true;
         } else {
@@ -75,36 +71,36 @@ class MainView extends Backbone.View {
     }
 
     return false;
-  }
+  },
 
-  _updateTitle() {
-    if (!this.unreadMessages) return document.title = `${this.title}`;
-    return document.title = `${this.title} (${this.unreadMessages})`;
-  }
+  _updateTitle: function() {
+    if (!this.unreadMessages) return document.title = this.title;
+    return document.title = this.title + ' ' + this.unreadMessages;
+  },
 
-  showNotification(text) {
+  showNotification: function(text) {
     if (!pageIsVisible()) {
       this.unreadMessages += 1;
     }
     this._updateTitle();
     // if (this.requestNotificationsPermission() && !pageIsVisible()) {
-    //   let notification = new Notification('WebRTC', {
+    //   var notification = new Notification('WebRTC', {
     //     icon: 'http://lorempixel.com/50/50/',
     //     body: text,
     //   });
     // }
-  }
+  },
 
-  submitForm(e) {
+  submitForm: function(e) {
     e.preventDefault();
 
     App.sendMessage(this.textinput.value);
     this.sendForm.reset();
-  }
+  },
 
-  onMessage(messageModel) {
-    let message;
-    const _m = document.createElement('div');
+  onMessage: function(messageModel) {
+    var message;
+    var _m = document.createElement('div');
 
     switch (messageModel.get('type')) {
       case 'text':
@@ -134,26 +130,26 @@ class MainView extends Backbone.View {
 
     this.messagesList.appendChild(_m.childNodes[0]);
     this.messagesList.scrollTop = this.messagesList.scrollHeight;
-  }
+  },
 
   // Drag functions
-  handleDragEnter(e) {
+  handleDragEnter: function(e) {
     e.preventDefault()
     this.el.classList.add('draddover');
-  }
+  },
 
-  handleDragOver(e) {
+  handleDragOver: function(e) {
     e.preventDefault()
-  }
+  },
 
-  handleDragLeave(e) {
+  handleDragLeave: function(e) {
     this.el.classList.remove('draddover');
-  }
+  },
 
-  handleDragDrop(e) {
+  handleDragDrop: function(e) {
     e.preventDefault();
     App.sendFile(e.dataTransfer.files[0]);
-  }
-}
+  },
+});
 
 module.exports = MainView;

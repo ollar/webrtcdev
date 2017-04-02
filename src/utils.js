@@ -62,10 +62,10 @@ Middleware.prototype.go = function(next) {
 };
 
 module.exports = {
-  trace,
-  uuid,
-  _str,
-  pageIsVisible,
-  pageOnVisibilityChange,
-  Middleware,
+  trace: trace,
+  uuid: uuid,
+  _str: _str,
+  pageIsVisible: pageIsVisible,
+  pageOnVisibilityChange: pageOnVisibilityChange,
+  Middleware: Middleware,
 }

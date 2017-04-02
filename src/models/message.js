@@ -1,11 +1,9 @@
-class MessageModel extends Backbone.Model {
-  get defaults() {
-    return {
-      type: '',
-      data: '',
-      outgoing: false,
-    };
-  }
-}
+var MessageModel = Backbone.Model.extend({
+  defaults: {
+    type: '',
+    data: '',
+    outgoing: false,
+  },
+});
 
 module.exports = MessageModel;

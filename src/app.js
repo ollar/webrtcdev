@@ -1,8 +1,8 @@
-const WebRTC = require('./RTCPConnect');
-const Sync = require('./sync');
-const _str = require('./utils')._str;
-const trace = require('./utils').trace;
-const Middleware = require('./utils').Middleware;
+var WebRTC = require('./RTCPConnect');
+var Sync = require('./sync');
+var _str = require('./utils')._str;
+var trace = require('./utils').trace;
+var Middleware = require('./utils').Middleware;
 
 var App = (function(window) {
   var ws;
@@ -16,13 +16,13 @@ var App = (function(window) {
     // ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
     WebRTC.init(connectionId);
 
-    ws.onopen = () => _enterRoom();
+    ws.onopen = _enterRoom;
 
-    Sync.on('channelClose', (uid) => {
-      trace(`Channel close ${uid}`);
+    Sync.on('channelClose', function(uid) {
+      trace('Channel close ' + uid);
     });
 
-    Sync.on('channelCloseWS', (uid) => {
+    Sync.on('channelCloseWS', function(uid) {
       ws.send(_str({
         type: 'channelClose',
         uid: uid || WebRTC.getUid(),
@@ -31,12 +31,12 @@ var App = (function(window) {
 
     Sync.on('ws:send', _sendWsMessage);
 
-    ws.onmessage = (event) => {
-      let message = JSON.parse(event.data);
+    ws.onmessage = function(event) {
+      var message = JSON.parse(event.data);
 
       switch (message.type) {
         case 'newUser':
-          let uid = message.uid
+          var uid = message.uid
           // someone entered room
           // we create connection with him
           WebRTC.createConnection(uid);
@@ -92,7 +92,7 @@ var App = (function(window) {
    * @param  {String} text message body
    */
   function sendMessage(text) {
-    _.map(WebRTC.getPeers(), (peer) => {
+    _.map(WebRTC.getPeers(), function(peer) {
       if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
     });
 
@@ -112,7 +112,7 @@ var App = (function(window) {
   }
 
   function _createFileConnections(cb) {
-    _.map(WebRTC.getPeers(), (peers, key) => {
+    _.map(WebRTC.getPeers(), function(peers, key) {
       WebRTC.createConnection(key, WebRTC.getUid() + '_file', key + '_file');
       var channel = WebRTC.createChannel(key + '_file');
       WebRTC.createOffer(key, WebRTC.getUid() + '_file', key + '_file');
@@ -122,7 +122,7 @@ var App = (function(window) {
   }
 
   function _closeFileConnections(next) {
-    _.map(WebRTC.getPeers(), (peer, key) => {
+    _.map(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1)
         WebRTC.dropConnection(key);
     });
@@ -131,7 +131,7 @@ var App = (function(window) {
   }
 
   function _sendTransferPrepareInfo(next, file) {
-    _.map(WebRTC.getPeers(), (peer, key) => {
+    _.map(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1 &&
         peer && peer.channel &&
         peer.channel.readyState === 'open') {
@@ -149,7 +149,7 @@ var App = (function(window) {
   }
 
   function _sendTransferCompleteInfo(next) {
-    _.map(WebRTC.getPeers(), (peer, key) => {
+    _.map(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1 &&
         peer && peer.channel &&
         peer.channel.readyState === 'open') {
@@ -169,7 +169,7 @@ var App = (function(window) {
     var reader = new window.FileReader();
     reader.onload = (function() {
       return function(e) {
-        _.map(WebRTC.getPeers(), (peer, key) => {
+        _.map(WebRTC.getPeers(), function(peer, key) {
           if (key.indexOf('_file') > -1 &&
             peer && peer.channel &&
             peer.channel.readyState === 'open') {
@@ -183,7 +183,7 @@ var App = (function(window) {
         } else {
           messageHistoryUpdate({
             type: 'text',
-            data: `Sent file "${file.name}" (${file.size})`,
+            data: 'Sent file "' + file.name + '" (' + file.size + ')',
             outgoing: true,
           });
 
@@ -209,8 +209,8 @@ var App = (function(window) {
     }
 
     middleware.use(_createFileConnections);
-    middleware.use((next) => _sendTransferPrepareInfo(next, file));
-    middleware.use((next) => _sliceFile(next, 0, file));
+    middleware.use(function(next) {return _sendTransferPrepareInfo(next, file);});
+    middleware.use(function(next) {return _sliceFile(next, 0, file);});
     middleware.use(_sendTransferCompleteInfo);
     middleware.use(_closeFileConnections);
 
@@ -221,9 +221,9 @@ var App = (function(window) {
   }
 
   return {
-    init,
-    sendFile,
-    sendMessage,
+    init: init,
+    sendFile: sendFile,
+    sendMessage: sendMessage,
   };
 })(window);
 

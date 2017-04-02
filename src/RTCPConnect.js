@@ -1,12 +1,12 @@
-const adapter = require('webrtc-adapter');
+var adapter = require('webrtc-adapter');
 
-const trace = require('./utils').trace;
-const uuid = require('./utils').uuid;
-const _str = require('./utils')._str;
+var trace = require('./utils').trace;
+var uuid = require('./utils').uuid;
+var _str = require('./utils')._str;
 
-const Sync = require('./sync');
+var Sync = require('./sync');
 
-const servers = {
+var servers = {
   iceServers: [
     {url:'stun:stun01.sipphone.com'},
     {url:'stun:stun.ekiga.net'},
@@ -70,16 +70,21 @@ var RTCPConnect = (function(window) {
    * @param  {String} [connToUid=toUid] recipient connection uid
    * @return {RTCPeerConnection}        new PeerConnection
    */
-  function createConnection(toUid, connFromUid = uid, connToUid = toUid) {
-    trace('Using SCTP based data channels');
-    const connection = new RTCPeerConnection(servers, pcConstraint);
+  function createConnection(toUid, connFromUid, connToUid) {
+    connFromUid = typeof connFromUid !== 'undefined' ? connFromUid : uid;
+    connToUid = typeof connToUid !== 'undefined' ? connToUid : toUid;
 
-    connection.ondatachannel = (event) =>
-      _receiveChannelCallback(event, connToUid);
+    trace('Using SCTP based data channels');
+    var connection = new RTCPeerConnection(servers, pcConstraint);
+
+    connection.ondatachannel = function(event) {
+      return _receiveChannelCallback(event, connToUid);
+    };
 
     if (uid !== connToUid) {
-      connection.onicecandidate = (event) =>
-        _onIceCandidate(event, toUid, connFromUid, connToUid);
+      connection.onicecandidate = function(event) {
+        return _onIceCandidate(event, toUid, connFromUid, connToUid);
+      };
     }
 
     peers[connToUid] = {};
@@ -95,9 +100,9 @@ var RTCPConnect = (function(window) {
    * @return {RTCDataChannel} new data channel
    */
   function createChannel(connToUid) {
-    const connection = peers[connToUid].connection;
-    const channel = connection.createDataChannel(connToUid, dataConstraint);
-    trace(`Created send data channel with id: ${connToUid}`);
+    var connection = peers[connToUid].connection;
+    var channel = connection.createDataChannel(connToUid, dataConstraint);
+    trace('Created send data channel with id: ' + connToUid);
 
     peers[connToUid].channel = channel;
 
@@ -112,11 +117,14 @@ var RTCPConnect = (function(window) {
    * @param  {String} [connFromUid=uid] sender connection uid
    * @param  {String} [connToUid=toUid] recipient connection uid
    */
-  function createOffer(toUid, connFromUid = uid, connToUid = toUid) {
-    const connection = peers[connToUid].connection;
+  function createOffer(toUid, connFromUid, connToUid) {
+    connFromUid = typeof connFromUid !== 'undefined' ? connFromUid : uid;
+    connToUid = typeof connToUid !== 'undefined' ? connToUid : toUid;
+
+    var connection = peers[connToUid].connection;
 
     connection.createOffer().then(
-      (offer) => {
+      function(offer) {
         connection.setLocalDescription(offer);
         Sync.trigger('ws:send', _str({
           type: 'offer',
@@ -136,16 +144,16 @@ var RTCPConnect = (function(window) {
    * @param  {Object} message - offer message
    */
   function handleOffer(message) {
-    let offer = new RTCSessionDescription(JSON.parse(message.offer));
+    var offer = new RTCSessionDescription(JSON.parse(message.offer));
 
     // need to switch UIDs here
-    let _connection = createConnection(message.fromUid,
+    var _connection = createConnection(message.fromUid,
       message.connToUid, message.connFromUid);
 
     _connection.setRemoteDescription(offer);
 
     _connection.createAnswer().then(
-      (answer) => {
+      function(answer) {
         _connection.setLocalDescription(answer);
         Sync.trigger('ws:send', _str({
           type: 'answer',
@@ -165,14 +173,14 @@ var RTCPConnect = (function(window) {
    * @param  {Object} message answer message
    */
   function handleAnswer(message) {
-    const connection = peers[message.connFromUid].connection;
+    var connection = peers[message.connFromUid].connection;
 
-    let answer = new RTCSessionDescription(JSON.parse(message.answer));
+    var answer = new RTCSessionDescription(JSON.parse(message.answer));
     connection.setRemoteDescription(answer);
   }
 
   function handleIceCandidate(message) {
-    const connection = peers[message.connFromUid].connection;
+    var connection = peers[message.connFromUid].connection;
     connection.addIceCandidate(new RTCIceCandidate(JSON.parse(message.iceCandidate)));
   }
 
@@ -204,7 +212,7 @@ var RTCPConnect = (function(window) {
    */
   function _receiveChannelCallback(event, toUid) {
     trace('Receive Channel Callback');
-    const channel = event.channel;
+    var channel = event.channel;
 
     peers[toUid].channel = channel;
 
@@ -216,10 +224,10 @@ var RTCPConnect = (function(window) {
    * @param  {RTCDataChannel} channel RTC data channel
    */
   function _bindChannelEvents(channel) {
-    channel.onopen = () => _onSendChannelStateChange(channel);
-    channel.onclose = () => _onSendChannelStateChange(channel);
+    channel.onopen = function() {return _onSendChannelStateChange(channel);};
+    channel.onclose = function() {return _onSendChannelStateChange(channel);};
 
-    channel.onmessage = (event) => {
+    channel.onmessage = function(event) {
       if (typeof event.data === 'string') {
         if (event.data.indexOf('__fileDescription') > -1) {
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
@@ -235,7 +243,7 @@ var RTCPConnect = (function(window) {
               outgoing: false,
             });
 
-            let _filePeer = JSON.parse(event.data.split('::')[1]).connFromUid;
+            var _filePeer = JSON.parse(event.data.split('::')[1]).connFromUid;
             dropConnection(_filePeer);
           }
         } else {
@@ -279,8 +287,8 @@ var RTCPConnect = (function(window) {
    * @param  {String} toUid connection uid
    */
   function dropConnection(toUid) {
-    const connection = peers[toUid].connection;
-    const channel = peers[toUid].channel;
+    var connection = peers[toUid].connection;
+    var channel = peers[toUid].channel;
 
     if (channel) channel.close();
     if (connection) connection.close();

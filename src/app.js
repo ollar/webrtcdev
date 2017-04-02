@@ -4,7 +4,7 @@ const _str = require('./utils')._str;
 const trace = require('./utils').trace;
 const Middleware = require('./utils').Middleware;
 
-var App = (function() {
+var App = (function(window) {
   var ws;
 
   /**
@@ -173,8 +173,7 @@ var App = (function() {
           if (key.indexOf('_file') > -1 &&
             peer && peer.channel &&
             peer.channel.readyState === 'open') {
-              // peer.channel.send(e.target.result);
-              peer.channel.send(offset);
+              peer.channel.send(e.target.result);
             }
         });
 
@@ -226,6 +225,6 @@ var App = (function() {
     sendFile,
     sendMessage,
   };
-})();
+})(window);
 
 module.exports = App;

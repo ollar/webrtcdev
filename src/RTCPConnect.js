@@ -45,7 +45,7 @@ const servers = {
   ]
 };
 
-var RTCPConnect = (function() {
+var RTCPConnect = (function(window) {
   var uid = uuid();
   var peers = {};
   var pcConstraint = null;
@@ -141,7 +141,6 @@ var RTCPConnect = (function() {
     // need to switch UIDs here
     let _connection = createConnection(message.fromUid,
       message.connToUid, message.connFromUid);
-    createChannel(message.connFromUid);
 
     _connection.setRemoteDescription(offer);
 
@@ -209,8 +208,6 @@ var RTCPConnect = (function() {
 
     peers[toUid].channel = channel;
 
-    console.log(toUid);
-
     _bindChannelEvents(channel);
   }
 
@@ -226,9 +223,7 @@ var RTCPConnect = (function() {
       if (typeof event.data === 'string') {
         if (event.data.indexOf('__fileDescription') > -1) {
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
-          console.log(1, event.target);
         } else if (event.data.indexOf('__fileTransferComplete') > -1) {
-          console.log(2, event.target, event.target.__fileDescription, peers);
           if (event.target._receiveBuffer) {
             var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.type});
             var href = URL.createObjectURL(received);
@@ -309,6 +304,6 @@ var RTCPConnect = (function() {
       return peers;
     },
   };
-})();
+})(window);
 
 module.exports = RTCPConnect;

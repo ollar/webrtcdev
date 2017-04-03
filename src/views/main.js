@@ -5,7 +5,7 @@ var pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
 var textTemplate = require('../templates/textMessage.html');
 var fileTemplate = require('../templates/fileMessage.html');
 var App = require('../app');
-var linkifyStr = require('linkifyjs/string');
+var anchorme = require("anchorme").default;
 
 var MainView = Backbone.View.extend({
   initialize: function(options) {
@@ -107,7 +107,14 @@ var MainView = Backbone.View.extend({
         message = _.template(textTemplate);
         _m.innerHTML = message({
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
-          text: linkifyStr(messageModel.get('data')),
+          text: anchorme(messageModel.get('data'), {
+            attributes: [
+              {
+                name: 'target',
+                value: '_blank',
+              },
+            ],
+          }),
         });
         if (!messageModel.get('outgoing'))
           this.showNotification(messageModel.get('data'));

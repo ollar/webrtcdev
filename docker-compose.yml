@@ -5,7 +5,7 @@ web:
   volumes:
     - ./public/:/app/
   ports:
-    - "80:80"
+    - "8899:80"
 
   links:
     - server

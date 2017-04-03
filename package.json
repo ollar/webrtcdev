@@ -20,7 +20,6 @@
     "anchorme": "^1.0.4",
     "linkifyjs": "^2.1.4",
     "lodash": "^4.17.4",
-    "underscore": "^1.8.3",
     "webpack": "^2.2.1",
     "webrtc-adapter": "^2.1.0"
   },

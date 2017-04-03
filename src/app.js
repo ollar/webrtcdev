@@ -3,7 +3,7 @@ var Sync = require('./sync');
 var _str = require('./utils')._str;
 var trace = require('./utils').trace;
 var Middleware = require('./utils').Middleware;
-var _map = require('lodash/map');
+var _forEach = require('lodash/forEach');
 
 var App = (function(window) {
   var ws;
@@ -97,7 +97,7 @@ var App = (function(window) {
    * @param  {String} text message body
    */
   function sendMessage(text) {
-    _map(WebRTC.getPeers(), function(peer) {
+    _forEach(WebRTC.getPeers(), function(peer) {
       if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
     });
 
@@ -117,7 +117,7 @@ var App = (function(window) {
   }
 
   function _createFileConnections(cb) {
-    _map(WebRTC.getPeers(), function(peers, key) {
+    _forEach(WebRTC.getPeers(), function(peers, key) {
       WebRTC.createConnection(key, WebRTC.getUid() + '_file', key + '_file');
       var channel = WebRTC.createChannel(key + '_file');
       WebRTC.createOffer(key, WebRTC.getUid() + '_file', key + '_file');
@@ -127,7 +127,7 @@ var App = (function(window) {
   }
 
   function _closeFileConnections(next) {
-    _map(WebRTC.getPeers(), function(peer, key) {
+    _forEach(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1)
         WebRTC.dropConnection(key);
     });
@@ -136,7 +136,7 @@ var App = (function(window) {
   }
 
   function _sendTransferPrepareInfo(next, file) {
-    _map(WebRTC.getPeers(), function(peer, key) {
+    _forEach(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1 &&
         peer && peer.channel &&
         peer.channel.readyState === 'open') {
@@ -154,7 +154,7 @@ var App = (function(window) {
   }
 
   function _sendTransferCompleteInfo(next) {
-    _map(WebRTC.getPeers(), function(peer, key) {
+    _forEach(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1 &&
         peer && peer.channel &&
         peer.channel.readyState === 'open') {
@@ -174,7 +174,7 @@ var App = (function(window) {
     var reader = new window.FileReader();
     reader.onload = (function() {
       return function(e) {
-        _map(WebRTC.getPeers(), function(peer, key) {
+        _forEach(WebRTC.getPeers(), function(peer, key) {
           if (key.indexOf('_file') > -1 &&
             peer && peer.channel &&
             peer.channel.readyState === 'open') {

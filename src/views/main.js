@@ -5,9 +5,11 @@ var pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
 var textTemplate = require('../templates/textMessage.html');
 var fileTemplate = require('../templates/fileMessage.html');
 var App = require('../app');
-var linkifyStr = require('linkifyjs/string');
+var anchorme = require("anchorme").default;
+var AView = require('ampersand-view');
+var _template = require('lodash/template');
 
-var MainView = Backbone.View.extend({
+var MainView = AView.extend({
   initialize: function(options) {
     this.title = document.title;
     this.unreadMessages = 0;
@@ -104,17 +106,24 @@ var MainView = Backbone.View.extend({
 
     switch (messageModel.get('type')) {
       case 'text':
-        message = _.template(textTemplate);
+        message = _template(textTemplate);
         _m.innerHTML = message({
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
-          text: linkifyStr(messageModel.get('data')),
+          text: anchorme(messageModel.get('data'), {
+            attributes: [
+              {
+          			name: 'target',
+          			value: '_blank',
+          		},
+            ]
+          }),
         });
         if (!messageModel.get('outgoing'))
           this.showNotification(messageModel.get('data'));
         break;
 
       case 'file':
-        message = _.template(fileTemplate);
+        message = _template(fileTemplate);
         _m.innerHTML = message({
           className: (messageModel.get('outgoing') ? 'outgoing' : ''),
           url: messageModel.get('data'),

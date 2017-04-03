@@ -1,6 +1,7 @@
+var ACollection = require('ampersand-collection');
 var MessageModel = require('../models/message');
 
-var HistoryCollection = Backbone.Collection.extend({
+var HistoryCollection = ACollection.extend({
   model: MessageModel,
 });
 

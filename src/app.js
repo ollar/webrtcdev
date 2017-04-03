@@ -3,6 +3,7 @@ var Sync = require('./sync');
 var _str = require('./utils')._str;
 var trace = require('./utils').trace;
 var Middleware = require('./utils').Middleware;
+var _map = require('lodash/map');
 
 var App = (function(window) {
   var ws;
@@ -12,8 +13,12 @@ var App = (function(window) {
    * @param  {String} connectionId connection UID
    */
   function init(connectionId) {
-    // ws = new WebSocket('ws://localhost:8765/' + connectionId);
-    ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+    if (ENV === 'dev') {
+      ws = new WebSocket('ws://localhost:8765/' + connectionId);
+    } else {
+      ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+    }
+
     WebRTC.init(connectionId);
 
     ws.onopen = _enterRoom;
@@ -92,7 +97,7 @@ var App = (function(window) {
    * @param  {String} text message body
    */
   function sendMessage(text) {
-    _.map(WebRTC.getPeers(), function(peer) {
+    _map(WebRTC.getPeers(), function(peer) {
       if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
     });
 
@@ -112,7 +117,7 @@ var App = (function(window) {
   }
 
   function _createFileConnections(cb) {
-    _.map(WebRTC.getPeers(), function(peers, key) {
+    _map(WebRTC.getPeers(), function(peers, key) {
       WebRTC.createConnection(key, WebRTC.getUid() + '_file', key + '_file');
       var channel = WebRTC.createChannel(key + '_file');
       WebRTC.createOffer(key, WebRTC.getUid() + '_file', key + '_file');
@@ -122,7 +127,7 @@ var App = (function(window) {
   }
 
   function _closeFileConnections(next) {
-    _.map(WebRTC.getPeers(), function(peer, key) {
+    _map(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1)
         WebRTC.dropConnection(key);
     });
@@ -131,7 +136,7 @@ var App = (function(window) {
   }
 
   function _sendTransferPrepareInfo(next, file) {
-    _.map(WebRTC.getPeers(), function(peer, key) {
+    _map(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1 &&
         peer && peer.channel &&
         peer.channel.readyState === 'open') {
@@ -149,7 +154,7 @@ var App = (function(window) {
   }
 
   function _sendTransferCompleteInfo(next) {
-    _.map(WebRTC.getPeers(), function(peer, key) {
+    _map(WebRTC.getPeers(), function(peer, key) {
       if (key.indexOf('_file') > -1 &&
         peer && peer.channel &&
         peer.channel.readyState === 'open') {
@@ -169,7 +174,7 @@ var App = (function(window) {
     var reader = new window.FileReader();
     reader.onload = (function() {
       return function(e) {
-        _.map(WebRTC.getPeers(), function(peer, key) {
+        _map(WebRTC.getPeers(), function(peer, key) {
           if (key.indexOf('_file') > -1 &&
             peer && peer.channel &&
             peer.channel.readyState === 'open') {

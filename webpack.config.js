@@ -8,28 +8,12 @@ module.exports = function(env) {
         filename: "bundle.js"
     },
     plugins: [
-      new webpack.ProvidePlugin({
-        '_': 'underscore',
-        Backbone: 'exports-loader?Backbone!' + __dirname + '/src/backboneConfig',
-        '$': 'jquery',
+      new webpack.DefinePlugin({
+        'ENV': JSON.stringify(env),
       }),
-      new webpack.IgnorePlugin(/^jquery$/),
     ],
     module: {
       loaders: [
-        // {
-        //   test: /\.js$/,
-        //   exclude: /(node_modules|bower_components)/,
-        //   loader: 'babel-loader',
-        //   query: {
-        //     presets: [['env', {
-        //       targets: {
-        //         browsers: ["last 2 versions", "safari >= 7"]
-        //       }
-        //     }]]
-        //   },
-        // },
-        { test: /backbone\.js$/, loader: 'imports-loader?define=>false' },
         {
           test: /\.html$/,
           include: /src\/templates/,

@@ -3,6 +3,7 @@ var adapter = require('webrtc-adapter');
 var trace = require('./utils').trace;
 var uuid = require('./utils').uuid;
 var _str = require('./utils')._str;
+var _size = require('lodash/size');
 
 var Sync = require('./sync');
 
@@ -270,7 +271,7 @@ var RTCPConnect = (function(window) {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen', channel);
     } else if (channel.readyState === 'closed') {
-      // if (_.size(peers) === 0) Sync.trigger('channelClose');
+      // if (_size(peers) === 0) Sync.trigger('channelClose');
     }
   }
 
@@ -293,7 +294,7 @@ var RTCPConnect = (function(window) {
     if (channel) channel.close();
     if (connection) connection.close();
     delete peers[toUid];
-    if (_.size(peers) === 0) Sync.trigger('channelClose');
+    if (_size(peers) === 0) Sync.trigger('channelClose');
   }
 
   return {

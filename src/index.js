@@ -1,27 +1,28 @@
-const RTCPConnect = require('./RTCPConnect');
-const uuid = require('./utils').uuid;
-const MainView = require('./views/main');
-const Sync = require('./sync');
-const App = require('./app');
+var RTCPConnect = require('./RTCPConnect');
+var uuid = require('./utils').uuid;
+var MainView = require('./views/main');
+var Sync = require('./sync');
+var App = require('./app');
+var AmpersandRouter = require('ampersand-router');
 
-const Router = Backbone.Router.extend({
+var Router = AmpersandRouter.extend({
   routes: {
     '': 'start',
     ':connectionId': 'main',
   },
 
   start: function() {
-    Backbone.history.navigate(uuid(), true);
+    this.history.navigate(uuid(), true);
   },
 
   main: function(connectionId) {
     App.init(connectionId);
-    const mainView = new MainView({
-      el: '#app',
+    var mainView = new MainView({
+      el: document.getElementById('app'),
       connectionId: connectionId,
     });
   },
 });
 
-new Router();
-Backbone.history.start();
+var appRouter = new Router();
+appRouter.history.start({pushState: false});

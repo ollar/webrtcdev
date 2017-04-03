@@ -1,8 +1,10 @@
-var MessageModel = Backbone.Model.extend({
-  defaults: {
-    type: '',
-    data: '',
-    outgoing: false,
+var AModel = require('ampersand-state');
+
+var MessageModel = AModel.extend({
+  props: {
+    type: 'string',
+    data: 'string',
+    outgoing: 'boolean',
   },
 });
 

@@ -94,6 +94,8 @@ var MainView = Backbone.View.extend({
   submitForm: function(e) {
     e.preventDefault();
 
+    if (!this.textinput.value) return;
+
     App.sendMessage(this.textinput.value);
     this.sendForm.reset();
   },
@@ -106,7 +108,7 @@ var MainView = Backbone.View.extend({
       case 'text':
         message = _.template(textTemplate);
         _m.innerHTML = message({
-          className: (messageModel.get('outgoing') ? 'outgoing' : ''),
+          colour: messageModel.get('colour'),
           text: anchorme(messageModel.get('data'), {
             attributes: [
               {
@@ -123,7 +125,7 @@ var MainView = Backbone.View.extend({
       case 'file':
         message = _.template(fileTemplate);
         _m.innerHTML = message({
-          className: (messageModel.get('outgoing') ? 'outgoing' : ''),
+          colour: messageModel.get('colour'),
           url: messageModel.get('data'),
           fileDescription: messageModel.get('__fileDescription'),
         });

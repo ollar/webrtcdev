@@ -3,6 +3,7 @@ var adapter = require('webrtc-adapter');
 var trace = require('./utils').trace;
 var uuid = require('./utils').uuid;
 var _str = require('./utils')._str;
+var colours = require('./palette');
 
 var Sync = require('./sync');
 
@@ -51,6 +52,7 @@ var RTCPConnect = (function(window) {
   var pcConstraint = null;
   var dataConstraint = null;
   var connectionId;
+  var usedColours = [];
 
   /**
    * Initialize function
@@ -74,6 +76,9 @@ var RTCPConnect = (function(window) {
     connFromUid = typeof connFromUid !== 'undefined' ? connFromUid : uid;
     connToUid = typeof connToUid !== 'undefined' ? connToUid : toUid;
 
+    var userColour = _.sample(_.difference(colours, usedColours));
+    usedColours[usedColours.length] = userColour;
+
     trace('Using SCTP based data channels');
     var connection = new RTCPeerConnection(servers, pcConstraint);
 
@@ -89,6 +94,7 @@ var RTCPConnect = (function(window) {
 
     peers[connToUid] = {};
     peers[connToUid].connection = connection;
+    peers[connToUid].colour = userColour;
 
     trace('Created local peer connection object localConnection');
     return connection;
@@ -235,22 +241,26 @@ var RTCPConnect = (function(window) {
           if (event.target._receiveBuffer) {
             var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.type});
             var href = URL.createObjectURL(received);
+            var message = JSON.parse(event.data.split('::')[1]);
 
             Sync.trigger('message', {
               type: 'file',
               data: href,
               __fileDescription: channel.__fileDescription || {},
-              outgoing: false,
+              colour: peers[message.fromUid] ?
+                peers[message.fromUid].colour : '#ccc',
             });
 
-            var _filePeer = JSON.parse(event.data.split('::')[1]).connFromUid;
-            dropConnection(_filePeer);
+            dropConnection(message.connFromUid);
           }
         } else {
+          var message = JSON.parse(event.data);
+
           Sync.trigger('message', {
-            type: 'text',
-            data: event.data,
-            outgoing: false,
+            colour: peers[message.fromUid] ?
+              peers[message.fromUid].colour : '#ccc',
+            type: message.type,
+            data: message.data,
           });
         }
       } else if (event.data instanceof ArrayBuffer) {

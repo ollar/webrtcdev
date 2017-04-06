@@ -3,6 +3,7 @@ var MessageModel = Backbone.Model.extend({
     type: '',
     data: '',
     outgoing: false,
+    colour: '#00bfff',
   },
 });
 

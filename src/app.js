@@ -96,13 +96,16 @@ var App = (function(window) {
    */
   function sendMessage(text) {
     _.map(WebRTC.getPeers(), function(peer) {
-      if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(text);
+      if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(_str({
+        fromUid: WebRTC.getUid(),
+        type: 'text',
+        data: text,
+      }));
     });
 
     messageHistoryUpdate({
       type: 'text',
       data: text,
-      outgoing: true,
     });
   }
 
@@ -158,6 +161,7 @@ var App = (function(window) {
         peer.channel.readyState === 'open') {
           peer.channel.send('__fileTransferComplete::' +
             _str({
+              fromUid: WebRTC.getUid(),
               connFromUid: WebRTC.getUid() + '_file',
             })
           );

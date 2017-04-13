@@ -117,20 +117,23 @@ var App = (function(window) {
     Sync.trigger('message', data);
   }
 
-  function _createFileConnections(cb) {
-    _.map(WebRTC.getPeers(), function(peers, key) {
-      WebRTC.createConnection(key, WebRTC.getUid() + '_file', key + '_file');
-      var channel = WebRTC.createChannel(key + '_file');
-      WebRTC.createOffer(key, WebRTC.getUid() + '_file', key + '_file');
+  function _createFileChannels(next) {
+    var peersNum = _.size(WebRTC.getPeers());
+    var i = 0;
 
-      channel.addEventListener('open', cb);
+    _.map(WebRTC.getPeers(), function(peer, key) {
+      var channel = WebRTC.createChannel(key, key + '_channel_file');
+      channel.addEventListener('open', function() {
+        i++;
+        if (i === peersNum) next();
+      });
     });
   }
 
-  function _closeFileConnections(next) {
-    _.map(WebRTC.getPeers(), function(peer, key) {
-      if (key.indexOf('_file') > -1)
-        WebRTC.dropConnection(key);
+  function _closeFileChannels(next) {
+    _.each(WebRTC.getPeers(), function(peer, key) {
+      peer[key + '_channel_file'].close();
+      delete peer[key + '_channel_file'];
     });
 
     next();
@@ -138,17 +141,16 @@ var App = (function(window) {
 
   function _sendTransferPrepareInfo(next, file) {
     _.map(WebRTC.getPeers(), function(peer, key) {
-      if (key.indexOf('_file') > -1 &&
-        peer && peer.channel &&
-        peer.channel.readyState === 'open') {
-          peer.channel.send('__fileDescription::' +
-            _str({
-              name: file.name,
-              size: file.size,
-              type: file.type,
-            })
-          );
-        }
+      var channel = peer[key + '_channel_file'];
+      if (channel && channel.readyState === 'open') {
+        channel.send('__fileDescription::' +
+          _str({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          })
+        );
+      }
     });
 
     return next();
@@ -156,16 +158,14 @@ var App = (function(window) {
 
   function _sendTransferCompleteInfo(next) {
     _.map(WebRTC.getPeers(), function(peer, key) {
-      if (key.indexOf('_file') > -1 &&
-        peer && peer.channel &&
-        peer.channel.readyState === 'open') {
-          peer.channel.send('__fileTransferComplete::' +
-            _str({
-              fromUid: WebRTC.getUid(),
-              connFromUid: WebRTC.getUid() + '_file',
-            })
-          );
-        }
+      var channel = peer[key + '_channel_file'];
+      if (channel && channel.readyState === 'open') {
+        channel.send('__fileTransferComplete::' +
+          _str({
+            fromUid: WebRTC.getUid(),
+          })
+        );
+      }
     });
 
     return next();
@@ -177,11 +177,10 @@ var App = (function(window) {
     reader.onload = (function() {
       return function(e) {
         _.map(WebRTC.getPeers(), function(peer, key) {
-          if (key.indexOf('_file') > -1 &&
-            peer && peer.channel &&
-            peer.channel.readyState === 'open') {
-              peer.channel.send(e.target.result);
-            }
+          var channel = peer[key + '_channel_file'];
+          if (channel && channel.readyState === 'open') {
+            channel.send(e.target.result);
+          }
         });
 
         if (file.size > offset + e.target.result.byteLength) {
@@ -215,11 +214,12 @@ var App = (function(window) {
       return;
     }
 
-    middleware.use(_createFileConnections);
+    // middleware.use(_createFileConnections);
+    middleware.use(_createFileChannels);
     middleware.use(function(next) {return _sendTransferPrepareInfo(next, file);});
     middleware.use(function(next) {return _sliceFile(next, 0, file);});
     middleware.use(_sendTransferCompleteInfo);
-    middleware.use(_closeFileConnections);
+    middleware.use(_closeFileChannels);
 
     middleware.go(function(next) {
       trace('File is ' + [file.name, file.size, file.type, file.lastModifiedDate].join(' '));

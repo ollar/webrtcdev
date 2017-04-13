@@ -47,8 +47,6 @@ async def RTCServer(websocket, path):
                 .send(json.dumps({
                     'type': 'offerFrom',
                     'fromUid': message.get('fromUid'),
-                    'connFromUid': message.get('connFromUid'),
-                    'connToUid': message.get('connToUid'),
                     'offer': message.get('offer'),
                 }))
 
@@ -57,8 +55,6 @@ async def RTCServer(websocket, path):
                 .send(json.dumps({
                     'type': 'answerFrom',
                     'fromUid': message.get('fromUid'),
-                    'connFromUid': message.get('connFromUid'),
-                    'connToUid': message.get('connToUid'),
                     'answer': message.get('answer'),
                 }))
 
@@ -67,7 +63,6 @@ async def RTCServer(websocket, path):
                 .send(json.dumps({
                     'type': 'iceCandidateFrom',
                     'fromUid': message.get('fromUid'),
-                    'connFromUid': message.get('connFromUid'),
                     'iceCandidate': message.get('iceCandidate'),
                 }))
 

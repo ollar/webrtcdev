@@ -68,14 +68,9 @@ var RTCPConnect = (function(window) {
   /**
    * Create new connection.
    * @param  {String} toUid             recipient uid stored on server
-   * @param  {String} [connFromUid=uid] sender connection uid
-   * @param  {String} [connToUid=toUid] recipient connection uid
    * @return {RTCPeerConnection}        new PeerConnection
    */
-  function createConnection(toUid, connFromUid, connToUid) {
-    connFromUid = typeof connFromUid !== 'undefined' ? connFromUid : uid;
-    connToUid = typeof connToUid !== 'undefined' ? connToUid : toUid;
-
+  function createConnection(toUid) {
     var userColour = _.sample(_.difference(colours, usedColours));
     usedColours[usedColours.length] = userColour;
 
@@ -83,18 +78,18 @@ var RTCPConnect = (function(window) {
     var connection = new RTCPeerConnection(servers, pcConstraint);
 
     connection.ondatachannel = function(event) {
-      return _receiveChannelCallback(event, connToUid);
+      return _receiveChannelCallback(event, toUid);
     };
 
-    if (uid !== connToUid) {
+    if (uid !== toUid) {
       connection.onicecandidate = function(event) {
-        return _onIceCandidate(event, toUid, connFromUid, connToUid);
+        return _onIceCandidate(event, toUid);
       };
     }
 
-    peers[connToUid] = {};
-    peers[connToUid].connection = connection;
-    peers[connToUid].colour = userColour;
+    peers[toUid] = {};
+    peers[toUid].connection = connection;
+    peers[toUid].colour = userColour;
 
     trace('Created local peer connection object localConnection');
     return connection;
@@ -102,15 +97,23 @@ var RTCPConnect = (function(window) {
 
   /**
    * Create new channel
-   * @param  {String} connToUid   recipient connection uid
-   * @return {RTCDataChannel} new data channel
+   * @param  {String} toUid    recipient connection uid
+   * @param {String} channelId channel unique Id
+   * @return {RTCDataChannel}  new data channel
    */
-  function createChannel(connToUid) {
-    var connection = peers[connToUid].connection;
-    var channel = connection.createDataChannel(connToUid, dataConstraint);
-    trace('Created send data channel with id: ' + connToUid);
+  function createChannel(toUid, channelId) {
+    channelId = typeof channelId !== 'undefined' ? channelId : toUid;
 
-    peers[connToUid].channel = channel;
+    var connection = peers[toUid].connection;
+    var channel = connection.createDataChannel(channelId, dataConstraint);
+    trace('Created send data channel with id: ' + channelId);
+
+    if (arguments.length > 1) {
+      peers[toUid][channelId] = channel;
+    } else {
+      peers[toUid].channel = channel;
+    }
+
 
     _bindChannelEvents(channel);
 
@@ -120,14 +123,9 @@ var RTCPConnect = (function(window) {
   /**
    * Create RTCOffer
    * @param  {String} toUid             recipient uid stored on server
-   * @param  {String} [connFromUid=uid] sender connection uid
-   * @param  {String} [connToUid=toUid] recipient connection uid
    */
-  function createOffer(toUid, connFromUid, connToUid) {
-    connFromUid = typeof connFromUid !== 'undefined' ? connFromUid : uid;
-    connToUid = typeof connToUid !== 'undefined' ? connToUid : toUid;
-
-    var connection = peers[connToUid].connection;
+  function createOffer(toUid) {
+    var connection = peers[toUid].connection;
 
     connection.createOffer().then(
       function(offer) {
@@ -136,8 +134,6 @@ var RTCPConnect = (function(window) {
           type: 'offer',
           fromUid: uid,
           toUid: toUid,
-          connFromUid: connFromUid,
-          connToUid: connToUid,
           offer: _str(offer.toJSON()),
         }));
       },
@@ -153,8 +149,7 @@ var RTCPConnect = (function(window) {
     var offer = new RTCSessionDescription(JSON.parse(message.offer));
 
     // need to switch UIDs here
-    var _connection = createConnection(message.fromUid,
-      message.connToUid, message.connFromUid);
+    var _connection = createConnection(message.fromUid);
 
     _connection.setRemoteDescription(offer);
 
@@ -165,8 +160,6 @@ var RTCPConnect = (function(window) {
           type: 'answer',
           fromUid: uid,
           toUid: message.fromUid,
-          connFromUid: message.connToUid,
-          connToUid: message.connFromUid,
           answer: _str(answer.toJSON()),
         }));
       },
@@ -179,14 +172,14 @@ var RTCPConnect = (function(window) {
    * @param  {Object} message answer message
    */
   function handleAnswer(message) {
-    var connection = peers[message.connFromUid].connection;
+    var connection = peers[message.fromUid].connection;
 
     var answer = new RTCSessionDescription(JSON.parse(message.answer));
     connection.setRemoteDescription(answer);
   }
 
   function handleIceCandidate(message) {
-    var connection = peers[message.connFromUid].connection;
+    var connection = peers[message.fromUid].connection;
     connection.addIceCandidate(new RTCIceCandidate(JSON.parse(message.iceCandidate)));
   }
 
@@ -194,18 +187,14 @@ var RTCPConnect = (function(window) {
    * Handle local ice candidate
    * @param  {Event} event        iceCandidate event
    * @param  {String} toUid       recipient uid stored on server
-   * @param  {String} connFromUid sender connection uid
-   * @param  {String} connToUid   recipient connection uid
    */
-  function _onIceCandidate(event, toUid, connFromUid, connToUid) {
+  function _onIceCandidate(event, toUid) {
     trace('local ice callback');
     if (event.candidate) {
       Sync.trigger('ws:send', _str({
         type: 'iceCandidate',
         fromUid: uid,
         toUid: toUid,
-        connFromUid: connFromUid,
-        connToUid: connToUid,
         iceCandidate: _str(event.candidate.toJSON()),
       }));
     }
@@ -220,7 +209,11 @@ var RTCPConnect = (function(window) {
     trace('Receive Channel Callback');
     var channel = event.channel;
 
-    peers[toUid].channel = channel;
+    if (!peers[toUid].channel) {
+      peers[toUid].channel = channel;
+    } else {
+      peers[toUid][channel.label] = channel;
+    }
 
     _bindChannelEvents(channel);
   }
@@ -250,8 +243,6 @@ var RTCPConnect = (function(window) {
               colour: peers[message.fromUid] ?
                 peers[message.fromUid].colour : '#ccc',
             });
-
-            dropConnection(message.connFromUid);
           }
         } else {
           var message = JSON.parse(event.data);
@@ -280,7 +271,10 @@ var RTCPConnect = (function(window) {
     if (channel.readyState === 'open') {
       Sync.trigger('channelOpen', channel);
     } else if (channel.readyState === 'closed') {
-      // if (_.size(peers) === 0) Sync.trigger('channelClose');
+      _.each(peers, function(peer, key) {
+        if (peer[channel.label])
+          delete peer[channel.label];
+      });
     }
   }
 

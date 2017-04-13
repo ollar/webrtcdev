@@ -222,7 +222,7 @@ var App = (function(window) {
     middleware.use(_closeFileChannels);
 
     middleware.go(function(next) {
-      trace('File is ' + [file.name, file.size, file.type, file.lastModifiedDate].join(' '));
+      trace('File is ' + [file.name, file.size, file.type, file.lastModified].join(' '));
       return true;
     });
   }

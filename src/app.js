@@ -66,10 +66,10 @@ var App = (function(window) {
       }
     }
 
-    window.onunload = function() {
+    window.addEventListener('beforeunload', function() {
       Sync.trigger('channelCloseWS', WebRTC.getUid());
       return null;
-    };
+    });
   }
 
   /**

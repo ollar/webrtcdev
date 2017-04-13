@@ -24,4 +24,4 @@ server:
   ports:
     - "8765:8765"
 
-  mem_limit: 16m
+  mem_limit: 32m

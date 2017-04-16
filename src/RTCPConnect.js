@@ -106,6 +106,7 @@ var RTCPConnect = (function(window) {
 
     var connection = peers[toUid].connection;
     var channel = connection.createDataChannel(channelId, dataConstraint);
+    channel.binaryType = 'arraybuffer';
     trace('Created send data channel with id: ' + channelId);
 
     if (arguments.length > 1) {
@@ -208,6 +209,7 @@ var RTCPConnect = (function(window) {
   function _receiveChannelCallback(event, toUid) {
     trace('Receive Channel Callback');
     var channel = event.channel;
+    channel.binaryType = 'arraybuffer';
 
     if (!peers[toUid].channel) {
       peers[toUid].channel = channel;

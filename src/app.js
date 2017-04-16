@@ -123,6 +123,7 @@ var App = (function(window) {
 
     _.map(WebRTC.getPeers(), function(peer, key) {
       var channel = WebRTC.createChannel(key, key + '_channel_file');
+      channel.binaryType = 'arraybuffer';
       channel.addEventListener('open', function() {
         i++;
         if (i === peersNum) next();

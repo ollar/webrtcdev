@@ -25,7 +25,11 @@ async def RTCServer(websocket, path):
     if not connections.get(path):
         connections[path] = {}
     while True:
-        message = await websocket.recv()
+        try:
+            message = await websocket.recv()
+        except websockets.exceptions.ConnectionClosed:
+            print('aga')
+            return
         message = json.loads(message)
         logging.info('got message {}'.format(message))
 

@@ -2,6 +2,9 @@ import asyncio
 import websockets
 import logging
 import json
+import uvloop
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 logging.basicConfig(level=logging.INFO)
 logging.info('server starts')

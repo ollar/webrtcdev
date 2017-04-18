@@ -6,6 +6,7 @@ var textTemplate = require('../templates/textMessage.html');
 var fileTemplate = require('../templates/fileMessage.html');
 var App = require('../app');
 var anchorme = require("anchorme").default;
+var bytes = require('bytes');
 
 var MainView = Backbone.View.extend({
   initialize: function(options) {
@@ -128,6 +129,7 @@ var MainView = Backbone.View.extend({
           colour: messageModel.get('colour'),
           url: messageModel.get('data'),
           fileDescription: messageModel.get('__fileDescription'),
+          bytes: bytes,
         });
         if (!messageModel.get('outgoing'))
           this.showNotification('Hooray! you\'ve received a file!');

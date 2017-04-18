@@ -3,6 +3,7 @@ var Sync = require('./sync');
 var _str = require('./utils')._str;
 var trace = require('./utils').trace;
 var Middleware = require('./utils').Middleware;
+var bytes = require('bytes');
 
 var App = (function(window) {
   var ws;
@@ -123,83 +124,77 @@ var App = (function(window) {
 
     _.map(WebRTC.getPeers(), function(peer, key) {
       var channel = WebRTC.createChannel(key, key + '_channel_file');
-      channel.binaryType = 'arraybuffer';
+
       channel.addEventListener('open', function() {
-        i++;
-        if (i === peersNum) next();
+        next(channel);
       });
     });
   }
 
-  function _closeFileChannels(next) {
-    _.each(WebRTC.getPeers(), function(peer, key) {
-      peer[key + '_channel_file'].close();
-      delete peer[key + '_channel_file'];
-    });
-
+  function _closeFileChannels(next, channel) {
+    channel.close();
     next();
   }
 
-  function _sendTransferPrepareInfo(next, file) {
-    _.map(WebRTC.getPeers(), function(peer, key) {
-      var channel = peer[key + '_channel_file'];
-      if (channel && channel.readyState === 'open') {
-        channel.send('__fileDescription::' +
-          _str({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-          })
-        );
-      }
-    });
+  function _sendTransferPrepareInfo(next, channel, file) {
+    if (channel && channel.readyState === 'open') {
+      channel.send('__fileDescription::' +
+        _str({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        })
+      );
+    }
 
-    return next();
+    return next(channel);
   }
 
-  function _sendTransferCompleteInfo(next) {
-    _.map(WebRTC.getPeers(), function(peer, key) {
-      var channel = peer[key + '_channel_file'];
-      if (channel && channel.readyState === 'open') {
-        channel.send('__fileTransferComplete::' +
-          _str({
-            fromUid: WebRTC.getUid(),
-          })
-        );
-      }
-    });
+  function _sendTransferCompleteInfo(next, channel) {
+    if (channel && channel.readyState === 'open') {
+      channel.send('__fileTransferComplete::' +
+        _str({
+          fromUid: WebRTC.getUid(),
+        })
+      );
+    }
 
-    return next();
+    return next(channel);
   }
 
-  function _sliceFile(next, offset, file) {
+  function _sliceFile(next, options) {
     var chunkSize = 16384;
     var reader = new window.FileReader();
-    reader.onload = (function() {
+    reader.onload = (function(_file) {
       return function(e) {
-        _.map(WebRTC.getPeers(), function(peer, key) {
-          var channel = peer[key + '_channel_file'];
-          if (channel && channel.readyState === 'open') {
-            channel.send(e.target.result);
-          }
-        });
+        var channel = options.channel;
+        if (channel && channel.readyState === 'open') {
+          channel.send(e.target.result);
+        }
 
-        if (file.size > offset + e.target.result.byteLength) {
-          _sliceFile(next, offset + chunkSize, file);
-          // setTimeout(_sliceFile, 0, next, offset + chunkSize, file);
+        if (_file.size > options.offset + e.target.result.byteLength) {
+          window.requestAnimationFrame(
+            function() {
+              return _sliceFile(next, {
+                offset: options.offset + chunkSize,
+                channel: options.channel,
+                file: _file,
+              });
+            }
+          );
         } else {
           messageHistoryUpdate({
             type: 'text',
-            data: 'Sent file "' + file.name + '" (' + file.size + ')',
+            data: 'Sent file "' + _file.name + '" (' + bytes(_file.size) + ')',
             outgoing: true,
           });
 
-          next();
+          next(options.channel);
         }
-        // sendProgress.value = offset + e.target.result.byteLength;
+        // sendProgress.value = options.offset + e.target.result.byteLength;
       };
-    })(file);
-    var slice = file.slice(offset, offset + chunkSize);
+    })(options.file);
+    var slice = options.file.slice(options.offset, options.offset + chunkSize);
     reader.readAsArrayBuffer(slice);
   }
 
@@ -215,12 +210,23 @@ var App = (function(window) {
       return;
     }
 
-    // middleware.use(_createFileConnections);
     middleware.use(_createFileChannels);
-    middleware.use(function(next) {return _sendTransferPrepareInfo(next, file);});
-    middleware.use(function(next) {return _sliceFile(next, 0, file);});
-    middleware.use(_sendTransferCompleteInfo);
-    middleware.use(_closeFileChannels);
+    middleware.use(function(next, channel) {
+      return _sendTransferPrepareInfo(next, channel, file);
+    });
+    middleware.use(function(next, channel) {
+      return _sliceFile(next, {
+        offset: 0,
+        channel: channel,
+        file: file,
+      });
+    });
+    middleware.use(function(next, channel) {
+      _sendTransferCompleteInfo(next, channel);
+    });
+    middleware.use(function(next, channel) {
+      _closeFileChannels(next, channel);
+    });
 
     middleware.go(function(next) {
       trace('File is ' + [file.name, file.size, file.type, file.lastModified].join(' '));

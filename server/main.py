@@ -34,7 +34,8 @@ async def RTCServer(websocket, path):
             print('aga')
             return
         message = json.loads(message)
-        logging.info('got message {}'.format(message))
+        # logging.info('got message {}'.format(message))
+        logging.info('got message type: {}'.format(message['type']))
 
         if message['type'] == 'enterRoom':
             for key, ws in connections[path].items():

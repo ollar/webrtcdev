@@ -231,6 +231,7 @@ var RTCPConnect = (function(window) {
     channel.onmessage = function(event) {
       if (typeof event.data === 'string') {
         if (event.data.indexOf('__fileDescription') > -1) {
+          Sync.trigger('load:start');
           event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
         } else if (event.data.indexOf('__fileTransferComplete') > -1) {
           if (event.target._receiveBuffer) {
@@ -245,7 +246,10 @@ var RTCPConnect = (function(window) {
               colour: peers[message.fromUid] ?
                 peers[message.fromUid].colour : '#ccc',
             });
+            Sync.trigger('load:complete');
           }
+        } else if (event.data.indexOf('__progress') > -1) {
+          Sync.trigger('load:progress', event.data.split('::')[1]);
         } else {
           var message = JSON.parse(event.data);
 

@@ -19,6 +19,7 @@ var MainView = Backbone.View.extend({
     this.messagesList = document.getElementById('messagesList');
     this.textinput = document.getElementById('data');
     this.button = document.getElementById('send');
+    this.loadProgress = document.getElementsByClassName('load-progress')[0];
 
     this.listenTo(Sync, 'message', function(data) {
       return this.collection.add(data);
@@ -30,6 +31,15 @@ var MainView = Backbone.View.extend({
     this.listenTo(Sync, 'channelClose', function() {
       this.textinput.setAttribute('disabled', 'disabled');
       this.button.setAttribute('disabled', 'disabled');
+    }, this);
+    this.listenTo(Sync, 'load:start', function() {
+      this.loadProgress.style.opacity = 1;
+    }, this);
+    this.listenTo(Sync, 'load:progress', function(progress) {
+      this.loadProgress.style.width = progress * 100 + '%';
+    }, this);
+    this.listenTo(Sync, 'load:complete', function() {
+      this.loadProgress.style.opacity = 0;
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
 

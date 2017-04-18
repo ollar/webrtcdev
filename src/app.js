@@ -189,9 +189,11 @@ var App = (function(window) {
             outgoing: true,
           });
 
-          next(options.channel);
+          return next(options.channel);
         }
-        // sendProgress.value = options.offset + e.target.result.byteLength;
+        var progress = (options.offset + e.target.result.byteLength) / _file.size;
+        Sync.trigger('load:progress', progress);
+        options.channel.send('__progress::' + progress);
       };
     })(options.file);
     var slice = options.file.slice(options.offset, options.offset + chunkSize);
@@ -212,6 +214,7 @@ var App = (function(window) {
 
     middleware.use(_createFileChannels);
     middleware.use(function(next, channel) {
+      Sync.trigger('load:start');
       return _sendTransferPrepareInfo(next, channel, file);
     });
     middleware.use(function(next, channel) {
@@ -222,6 +225,7 @@ var App = (function(window) {
       });
     });
     middleware.use(function(next, channel) {
+      Sync.trigger('load:complete');
       _sendTransferCompleteInfo(next, channel);
     });
     middleware.use(function(next, channel) {

@@ -60,3 +60,11 @@ html, body{
 .send-form .button{
   flex-grow: 0;
 }
+
+.load-progress{
+  background-color: deeppink;
+  height: 5px;
+  width: 0;
+  opacity: 0;
+  transition: opacity 0.3s linear;
+}

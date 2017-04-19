@@ -96,8 +96,9 @@ var App = (function(window) {
    * @param  {String} text message body
    */
   function sendMessage(text) {
-    _.map(WebRTC.getPeers(), function(peer) {
-      if (peer && peer.channel && peer.channel.readyState === 'open') peer.channel.send(_str({
+    WebRTC.getPeers().each(function(peer) {
+      var channel = peer.get('channel');
+      if (channel && channel.readyState === 'open') channel.send(_str({
         fromUid: WebRTC.getUid(),
         type: 'text',
         data: text,
@@ -119,10 +120,8 @@ var App = (function(window) {
   }
 
   function _createFileChannels(next) {
-    var peersNum = _.size(WebRTC.getPeers());
-    var i = 0;
-
-    _.map(WebRTC.getPeers(), function(peer, key) {
+    WebRTC.getPeers().each(function(peer) {
+      var key = peer.get('id');
       var channel = WebRTC.createChannel(key, key + '_channel_file');
 
       channel.addEventListener('open', function() {

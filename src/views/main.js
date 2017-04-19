@@ -7,15 +7,19 @@ var fileTemplate = require('../templates/fileMessage.html');
 var App = require('../app');
 var anchorme = require("anchorme").default;
 var bytes = require('bytes');
+var UserView = require('./user');
 
 var MainView = Backbone.View.extend({
   initialize: function(options) {
     this.title = document.title;
     this.unreadMessages = 0;
 
+    this.users = options.users;
+
     this.collection = new HistoryCollection();
 
     this.sendForm = document.getElementById('sendForm');
+    this.usersList = document.getElementById('usersList');
     this.messagesList = document.getElementById('messagesList');
     this.textinput = document.getElementById('data');
     this.button = document.getElementById('send');
@@ -43,6 +47,8 @@ var MainView = Backbone.View.extend({
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
 
+    this.listenTo(this.users, 'add remove', this.updateUsersList, this);
+
     this.requestNotificationsPermission();
 
     document.addEventListener(pageOnVisibilityChange(), function() {
@@ -59,6 +65,12 @@ var MainView = Backbone.View.extend({
     'dragover': 'handleDragOver',
     'dragleave': 'handleDragLeave',
     'drop': 'handleDragDrop',
+  },
+
+  updateUsersList: function() {
+    return this.usersList.innerHTML = this.users.map(function(user) {
+      return new UserView({ model: user }).render().el.outerHTML;
+    }).join('');
   },
 
   requestNotificationsPermission: function() {

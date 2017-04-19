@@ -68,3 +68,9 @@ html, body{
   opacity: 0;
   transition: opacity 0.3s linear;
 }
+
+.users-list {
+  padding: 0;
+  margin: 0;
+  font-size: 0.9em;
+}

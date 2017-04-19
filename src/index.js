@@ -19,6 +19,7 @@ const Router = Backbone.Router.extend({
     const mainView = new MainView({
       el: '#app',
       connectionId: connectionId,
+      users: RTCPConnect.getPeers(),
     });
   },
 });

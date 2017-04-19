@@ -74,3 +74,8 @@ html, body{
   margin: 0;
   font-size: 0.9em;
 }
+
+.users-list li{
+  display: inline-block;
+  margin: 0 5px 5px;
+}

@@ -45,9 +45,19 @@ var MainView = Backbone.View.extend({
     this.listenTo(Sync, 'load:complete', function() {
       this.loadProgress.style.opacity = 0;
     }, this);
+    this.listenTo(Sync, 'user:typing', function(uid) {
+      var user = this.users.get(uid);
+
+      if (user) {
+        user.set('typing', true);
+        setTimeout(function() {
+          user.set('typing', false);
+        }, 1000);
+      }
+    }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
 
-    this.listenTo(this.users, 'add remove', this.updateUsersList, this);
+    this.listenTo(this.users, 'add remove change', this.updateUsersList, this);
 
     this.requestNotificationsPermission();
 
@@ -65,6 +75,7 @@ var MainView = Backbone.View.extend({
     'dragover': 'handleDragOver',
     'dragleave': 'handleDragLeave',
     'drop': 'handleDragDrop',
+    'keypress #data': 'sendTyping',
   },
 
   updateUsersList: function() {
@@ -163,6 +174,10 @@ var MainView = Backbone.View.extend({
 
     this.messagesList.appendChild(_m.childNodes[0]);
     this.messagesList.scrollTop = this.messagesList.scrollHeight;
+  },
+
+  sendTyping: function() {
+    App.sendTyping();
   },
 
   // Drag functions

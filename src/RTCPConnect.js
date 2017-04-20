@@ -255,6 +255,8 @@ var RTCPConnect = (function(window) {
           }
         } else if (event.data.indexOf('__progress') > -1) {
           Sync.trigger('load:progress', event.data.split('::')[1]);
+        } else if (event.data.indexOf('__typing') > -1) {
+          Sync.trigger('user:typing', event.data.split('::')[1]);
         } else {
           var message = JSON.parse(event.data);
 

@@ -237,10 +237,18 @@ var App = (function(window) {
     });
   }
 
+  function sendTyping() {
+    WebRTC.getPeers().each(function(peer) {
+      var channel = peer.get('channel');
+      if (channel && channel.readyState === 'open') channel.send('__typing::' + WebRTC.getUid());
+    });
+  }
+
   return {
     init: init,
     sendFile: sendFile,
     sendMessage: sendMessage,
+    sendTyping: sendTyping,
   };
 })(window);
 

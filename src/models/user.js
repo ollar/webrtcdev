@@ -4,6 +4,7 @@ var User = Backbone.Model.extend({
     connection: '',
     channel: '',
     colour: '#ccc',
+    typing: false,
   }
 });
 

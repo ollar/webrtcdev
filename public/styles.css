@@ -79,3 +79,24 @@ html, body{
   display: inline-block;
   margin: 0 5px 5px;
 }
+
+.users-list li.typing{
+  animation-name: typing;
+  animation-iteration-count: infinite;
+  animation-duration: 0.5s;
+  animation-timing-function: ease;
+}
+
+@keyframes typing {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}

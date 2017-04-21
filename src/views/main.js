@@ -8,6 +8,8 @@ var App = require('../app');
 var anchorme = require("anchorme").default;
 var bytes = require('bytes');
 var UserView = require('./user');
+var _str = require('../utils')._str;
+var WebRTC = require('../RTCPConnect');
 
 var MainView = Backbone.View.extend({
   initialize: function(options) {
@@ -28,9 +30,14 @@ var MainView = Backbone.View.extend({
     this.listenTo(Sync, 'message', function(data) {
       return this.collection.add(data);
     }, this);
-    this.listenTo(Sync, 'channelOpen', function() {
+    this.listenTo(Sync, 'channelOpen', function(channel) {
       this.textinput.removeAttribute('disabled');
       this.button.removeAttribute('disabled');
+
+      channel.send(_str({
+        type: '__history',
+        messages: this.collection.toJSON(),
+      }));
     }, this);
     this.listenTo(Sync, 'channelClose', function() {
       this.textinput.setAttribute('disabled', 'disabled');

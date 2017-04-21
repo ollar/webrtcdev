@@ -137,13 +137,12 @@ var App = (function(window) {
 
   function _sendTransferPrepareInfo(next, channel, file) {
     if (channel && channel.readyState === 'open') {
-      channel.send('__fileDescription::' +
-        _str({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        })
-      );
+      channel.send(_str({
+        type: '__fileDescription',
+        name: file.name,
+        size: file.size,
+        mimeType: file.type,
+      }));
     }
 
     return next(channel);
@@ -151,11 +150,10 @@ var App = (function(window) {
 
   function _sendTransferCompleteInfo(next, channel) {
     if (channel && channel.readyState === 'open') {
-      channel.send('__fileTransferComplete::' +
-        _str({
-          fromUid: WebRTC.getUid(),
-        })
-      );
+      channel.send(_str({
+        type: '__fileTransferComplete',
+        fromUid: WebRTC.getUid(),
+      }));
     }
 
     return next(channel);
@@ -192,7 +190,10 @@ var App = (function(window) {
         }
         var progress = (options.offset + e.target.result.byteLength) / _file.size;
         Sync.trigger('load:progress', progress);
-        options.channel.send('__progress::' + progress);
+        options.channel.send(_str({
+          type: '__progress',
+          progress: progress,
+        }));
       };
     })(options.file);
     var slice = options.file.slice(options.offset, options.offset + chunkSize);
@@ -240,7 +241,10 @@ var App = (function(window) {
   function sendTyping() {
     WebRTC.getPeers().each(function(peer) {
       var channel = peer.get('channel');
-      if (channel && channel.readyState === 'open') channel.send('__typing::' + WebRTC.getUid());
+      if (channel && channel.readyState === 'open') channel.send(_str({
+        type: '__typing',
+        fromUid: WebRTC.getUid(),
+      }));
     });
   }
 

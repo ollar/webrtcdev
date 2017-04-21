@@ -236,35 +236,47 @@ var RTCPConnect = (function(window) {
 
     channel.onmessage = function(event) {
       if (typeof event.data === 'string') {
-        if (event.data.indexOf('__fileDescription') > -1) {
-          Sync.trigger('load:start');
-          event.target['__fileDescription'] = JSON.parse(event.data.split('::')[1]);
-        } else if (event.data.indexOf('__fileTransferComplete') > -1) {
-          if (event.target._receiveBuffer) {
-            var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.type});
-            var href = URL.createObjectURL(received);
-            var message = JSON.parse(event.data.split('::')[1]);
+        var message = JSON.parse(event.data);
 
+        switch (message.type) {
+          case '__fileDescription':
+            Sync.trigger('load:start');
+            event.target['__fileDescription'] = message;
+            break;
+
+          case '__fileTransferComplete':
+            if (event.target._receiveBuffer) {
+              var received = new window.Blob(event.target._receiveBuffer, {type: event.target.__fileDescription.mimeType});
+              var href = URL.createObjectURL(received);
+
+              Sync.trigger('message', {
+                type: 'file',
+                data: href,
+                __fileDescription: channel.__fileDescription || {},
+                colour: peers.get(message.fromUid).get('colour'),
+              });
+              Sync.trigger('load:complete');
+            }
+            break;
+
+          case '__progress':
+            Sync.trigger('load:progress', message.progress);
+            break;
+
+          case '__typing':
+            Sync.trigger('user:typing', message.fromUid);
+            break;
+
+          case '__history':
+            console.log(message);
+            break;
+
+          default:
             Sync.trigger('message', {
-              type: 'file',
-              data: href,
-              __fileDescription: channel.__fileDescription || {},
               colour: peers.get(message.fromUid).get('colour'),
+              type: message.type,
+              data: message.data,
             });
-            Sync.trigger('load:complete');
-          }
-        } else if (event.data.indexOf('__progress') > -1) {
-          Sync.trigger('load:progress', event.data.split('::')[1]);
-        } else if (event.data.indexOf('__typing') > -1) {
-          Sync.trigger('user:typing', event.data.split('::')[1]);
-        } else {
-          var message = JSON.parse(event.data);
-
-          Sync.trigger('message', {
-            colour: peers.get(message.fromUid).get('colour'),
-            type: message.type,
-            data: message.data,
-          });
         }
       } else if (event.data instanceof ArrayBuffer) {
         event.target._receiveBuffer = event.target._receiveBuffer || [];

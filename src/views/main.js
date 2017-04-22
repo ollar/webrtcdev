@@ -28,6 +28,8 @@ var MainView = Backbone.View.extend({
     this.loadProgress = document.getElementsByClassName('load-progress')[0];
 
     this.listenTo(Sync, 'message', function(data) {
+      var user = this.users.get(data.fromUid);
+      if (user) user.set('typing', false);
       return this.collection.add(data);
     }, this);
     this.listenTo(Sync, 'channelOpen', function(channel) {
@@ -55,16 +57,23 @@ var MainView = Backbone.View.extend({
     this.listenTo(Sync, 'user:typing', function(uid) {
       var user = this.users.get(uid);
 
+      if (user.get('typingTimer')) {
+        clearTimeout(user.get('typingTimer'));
+        user.unset('typingTimer');
+      }
+
       if (user) {
         user.set('typing', true);
-        setTimeout(function() {
+        var typingTimer = setTimeout(function() {
           user.set('typing', false);
+          user.unset('typingTimer');
         }, 1000);
+        user.set('typingTimer', typingTimer);
       }
     }, this);
     this.listenTo(this.collection, 'add', this.onMessage, this);
 
-    this.listenTo(this.users, 'add remove change', this.updateUsersList, this);
+    this.listenTo(this.users, 'add remove change:typing', this.updateUsersList, this);
 
     this.requestNotificationsPermission();
 

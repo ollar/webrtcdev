@@ -83,7 +83,7 @@ html, body{
 .users-list li.typing{
   animation-name: typing;
   animation-iteration-count: infinite;
-  animation-duration: 0.5s;
+  animation-duration: 0.4s;
   animation-timing-function: ease;
 }
 

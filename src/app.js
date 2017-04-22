@@ -12,13 +12,13 @@ var App = (function(window) {
    * init function
    * @param  {String} connectionId connection UID
    */
-  function init(connectionId) {
+  function init(connectionId, peers, history) {
     if (ENV === 'dev') {
       ws = new WebSocket('ws://localhost:8765/' + connectionId);
     } else {
       ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
     }
-    WebRTC.init(connectionId);
+    WebRTC.init(connectionId, peers, history);
 
     ws.onopen = _enterRoom;
 

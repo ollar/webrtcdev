@@ -4,7 +4,6 @@ var trace = require('./utils').trace;
 var uuid = require('./utils').uuid;
 var _str = require('./utils')._str;
 var colours = require('./palette');
-var UsersCollection = require('./collections/users');
 
 var Sync = require('./sync');
 
@@ -48,8 +47,9 @@ var servers = {
 };
 
 var RTCPConnect = (function(window) {
+  var peers;
+  var history;
   var uid = uuid();
-  var peers = new UsersCollection();
   var pcConstraint = null;
   var dataConstraint = null;
   var connectionId;
@@ -59,7 +59,9 @@ var RTCPConnect = (function(window) {
    * Initialize function
    * @param  {String} cId - connection ID
    */
-  function init(cId) {
+  function init(cId, _peers, _history) {
+    peers = _peers;
+    history = _history;
     window.peers = peers;
     window.uid = uid;
 
@@ -268,7 +270,7 @@ var RTCPConnect = (function(window) {
             break;
 
           case '__history':
-            console.log(message);
+            if (history.length === 0) history.set(message.messages);
             break;
 
           default:

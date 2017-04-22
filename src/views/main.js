@@ -1,4 +1,3 @@
-var HistoryCollection = require('../collections/history');
 var Sync = require('../sync');
 var pageIsVisible = require('../utils').pageIsVisible;
 var pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
@@ -16,9 +15,8 @@ var MainView = Backbone.View.extend({
     this.title = document.title;
     this.unreadMessages = 0;
 
-    this.users = options.users;
-
-    this.collection = new HistoryCollection();
+    this.users = options.peers;
+    this.collection = options.history;
 
     this.sendForm = document.getElementById('sendForm');
     this.usersList = document.getElementById('usersList');

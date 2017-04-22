@@ -3,6 +3,8 @@ const uuid = require('./utils').uuid;
 const MainView = require('./views/main');
 const Sync = require('./sync');
 const App = require('./app');
+var UsersCollection = require('./collections/users');
+var HistoryCollection = require('./collections/history');
 
 const Router = Backbone.Router.extend({
   routes: {
@@ -15,11 +17,15 @@ const Router = Backbone.Router.extend({
   },
 
   main: function(connectionId) {
-    App.init(connectionId);
+    var peers = new UsersCollection();
+    var history = new HistoryCollection();
+
+    App.init(connectionId, peers, history);
     const mainView = new MainView({
       el: '#app',
       connectionId: connectionId,
-      users: RTCPConnect.getPeers(),
+      peers: peers,
+      history: history,
     });
   },
 });

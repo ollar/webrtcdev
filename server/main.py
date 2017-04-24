@@ -24,6 +24,15 @@ async def RTCServer(websocket, path):
             if len(connections[path]) == 0:
                 del connections[path]
 
+    async def getConnection(uid):
+        return connections[path].get(uid, None)
+
+    async def sendData(uid, data):
+        connection = await getConnection(uid)
+
+        if connection:
+            return await connection.send(data)
+
     message = None
     if not connections.get(path):
         connections[path] = {}
@@ -31,7 +40,8 @@ async def RTCServer(websocket, path):
         try:
             message = await websocket.recv()
         except websockets.exceptions.ConnectionClosed:
-            print('aga')
+            await channelClose()
+            print('ConnectionClosed')
             return
         message = json.loads(message)
         # logging.info('got message {}'.format(message))
@@ -47,28 +57,25 @@ async def RTCServer(websocket, path):
             connections[path][message.get('uid')] = websocket
 
         elif message['type'] == 'offer':
-            await connections[path][message.get('toUid')]\
-                .send(json.dumps({
-                    'type': 'offerFrom',
-                    'fromUid': message.get('fromUid'),
-                    'offer': message.get('offer'),
-                }))
+            await sendData(message.get('toUid'), json.dumps({
+                'type': 'offerFrom',
+                'fromUid': message.get('fromUid'),
+                'offer': message.get('offer'),
+            }))
 
         elif message['type'] == 'answer':
-            await connections[path][message.get('toUid')]\
-                .send(json.dumps({
-                    'type': 'answerFrom',
-                    'fromUid': message.get('fromUid'),
-                    'answer': message.get('answer'),
-                }))
+            await sendData(message.get('toUid'), json.dumps({
+                'type': 'answerFrom',
+                'fromUid': message.get('fromUid'),
+                'answer': message.get('answer'),
+            }))
 
         elif message['type'] == 'iceCandidate':
-            await connections[path][message.get('toUid')]\
-                .send(json.dumps({
-                    'type': 'iceCandidateFrom',
-                    'fromUid': message.get('fromUid'),
-                    'iceCandidate': message.get('iceCandidate'),
-                }))
+            await sendData(message.get('toUid'), json.dumps({
+                'type': 'iceCandidateFrom',
+                'fromUid': message.get('fromUid'),
+                'iceCandidate': message.get('iceCandidate'),
+            }))
 
         elif message['type'] == 'channelClose':
             await channelClose()

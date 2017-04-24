@@ -161,43 +161,75 @@ var App = (function(window) {
 
   function _sliceFile(next, options) {
     var chunkSize = 16384;
-    var reader = new window.FileReader();
-    reader.onload = (function(_file) {
-      return function(e) {
-        var channel = options.channel;
-        if (channel && channel.readyState === 'open') {
-          channel.send(e.target.result);
-        }
+    // var reader = new window.FileReader();
+    // reader.onload = (function(_file) {
+    //   return function(e) {
+    //     var channel = options.channel;
+    //     if (channel && channel.readyState === 'open') {
+    //       channel.send(e.target.result);
+    //     }
+    //
+    //     if (_file.size > options.offset + e.target.result.byteLength) {
+    //       window.requestAnimationFrame(
+    //         function() {
+    //           return _sliceFile(next, {
+    //             offset: options.offset + chunkSize,
+    //             channel: options.channel,
+    //             file: _file,
+    //           });
+    //         }
+    //       );
+    //     } else {
+    //       messageHistoryUpdate({
+    //         type: 'text',
+    //         data: 'Sent file "' + _file.name + '" (' + bytes(_file.size) + ')',
+    //         outgoing: true,
+    //       });
+    //
+    //       return next(options.channel);
+    //     }
+    //     var progress = (options.offset + e.target.result.byteLength) / _file.size;
+    //     Sync.trigger('load:progress', progress);
+    //     options.channel.send(_str({
+    //       type: '__progress',
+    //       progress: progress,
+    //     }));
+    //   };
+    // })(options.file);
+    // var slice = options.file.slice(options.offset, options.offset + chunkSize);
+    // reader.readAsArrayBuffer(slice);
 
-        if (_file.size > options.offset + e.target.result.byteLength) {
-          window.requestAnimationFrame(
-            function() {
-              return _sliceFile(next, {
-                offset: options.offset + chunkSize,
-                channel: options.channel,
-                file: _file,
-              });
-            }
-          );
-        } else {
-          messageHistoryUpdate({
-            type: 'text',
-            data: 'Sent file "' + _file.name + '" (' + bytes(_file.size) + ')',
-            outgoing: true,
-          });
+    for (var offset = 0; offset < options.file.size; offset = offset + chunkSize) {
+      var reader = new window.FileReader();
+      reader.onload = (function(_offset) {
+        return function(e) {
+          var channel = options.channel;
+          if (channel && channel.readyState === 'open') {
+            channel.send(e.target.result);
+          }
 
-          return next(options.channel);
-        }
-        var progress = (options.offset + e.target.result.byteLength) / _file.size;
-        Sync.trigger('load:progress', progress);
-        options.channel.send(_str({
-          type: '__progress',
-          progress: progress,
-        }));
-      };
-    })(options.file);
-    var slice = options.file.slice(options.offset, options.offset + chunkSize);
-    reader.readAsArrayBuffer(slice);
+          if (options.file.size > _offset + e.target.result.byteLength) {
+
+          } else {
+            messageHistoryUpdate({
+              type: 'text',
+              data: 'Sent file "' + options.file.name + '" (' + bytes(options.file.size) + ')',
+              outgoing: true,
+            });
+
+            return next(options.channel);
+          }
+          var progress = (_offset + e.target.result.byteLength) / options.file.size;
+          Sync.trigger('load:progress', progress);
+          options.channel.send(_str({
+            type: '__progress',
+            progress: progress,
+          }));
+        };
+      })(offset);
+      var slice = options.file.slice(offset, offset + chunkSize);
+      reader.readAsArrayBuffer(slice);
+    }
   }
 
   /**

@@ -9,7 +9,7 @@ var Sync = require('./sync');
 
 var servers = {
   iceServers: [
-    {urls:'stun:stun01.sipphone.com'},
+    // {urls:'stun:stun01.sipphone.com'},
     // {urls:'stun:stun.ekiga.net'},
     // {urls:'stun:stun.fwdnet.net'},
     // {urls:'stun:stun.ideasip.com'},
@@ -19,7 +19,7 @@ var servers = {
     // {urls:'stun:stun.l.google.com:19302'},
     // {urls:'stun:stun1.l.google.com:19302'},
     // {urls:'stun:stun2.l.google.com:19302'},
-    // {urls:'stun:stun3.l.google.com:19302'},
+    {urls:'stun:stun3.l.google.com:19302'},
     // {urls:'stun:stun4.l.google.com:19302'},
     // {urls:'stun:stunserver.org'},
     // {urls:'stun:stun.softjoys.com'},
@@ -33,16 +33,16 @@ var servers = {
     // 	credential: 'muazkh',
     // 	username: 'webrtc@live.com'
     // },
-    // {
-    // 	urls: 'turn:192.158.29.39:3478?transport=udp',
-    // 	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-    // 	username: '28224511:1379330808'
-    // },
     {
-    	urls: 'turn:192.158.29.39:3478?transport=tcp',
+    	urls: 'turn:192.158.29.39:3478?transport=udp',
     	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
     	username: '28224511:1379330808'
     },
+    // {
+    // 	urls: 'turn:192.158.29.39:3478?transport=tcp',
+    // 	credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+    // 	username: '28224511:1379330808'
+    // },
   ]
 };
 
@@ -141,7 +141,6 @@ var RTCPConnect = (function(window) {
           type: 'offer',
           fromUid: uid,
           toUid: toUid,
-          // offer: _str(offer.toJSON()),
           offer: _str(offer),
         }));
       },
@@ -168,7 +167,6 @@ var RTCPConnect = (function(window) {
           type: 'answer',
           fromUid: uid,
           toUid: message.fromUid,
-          // answer: _str(answer.toJSON()),
           answer: _str(answer),
         }));
       },

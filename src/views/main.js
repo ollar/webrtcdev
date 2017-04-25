@@ -51,6 +51,7 @@ var MainView = Backbone.View.extend({
     }, this);
     this.listenTo(Sync, 'load:complete', function() {
       this.loadProgress.style.opacity = 0;
+      this.loadProgress.style.width = 0;
     }, this);
     this.listenTo(Sync, 'user:typing', function(uid) {
       var user = this.users.get(uid);
@@ -210,7 +211,9 @@ var MainView = Backbone.View.extend({
 
   handleDragDrop: function(e) {
     e.preventDefault();
-    App.sendFile(e.dataTransfer.files[0]);
+    _.each(e.dataTransfer.files, function(file) {
+      App.sendFile(file);
+    });
   },
 });
 

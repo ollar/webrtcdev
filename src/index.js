@@ -1,10 +1,12 @@
-const RTCPConnect = require('./RTCPConnect');
-const uuid = require('./utils').uuid;
-const MainView = require('./views/main');
-const Sync = require('./sync');
-const App = require('./app');
-var UsersCollection = require('./collections/users');
-var HistoryCollection = require('./collections/history');
+import RTCPConnect from './RTCPConnect';
+import { uuid } from './utils';
+import MainView from './views/main';
+import Sync from './sync';
+import App from './app';
+import UsersCollection from './collections/users';
+import HistoryCollection from './collections/history';
+import './backboneConfig';
+
 
 const Router = Backbone.Router.extend({
   routes: {

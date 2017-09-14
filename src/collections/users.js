@@ -1,7 +1,7 @@
-var UserModel = require('../models/user');
+import UserModel from '../models/user';
 
 var Users = Backbone.Collection.extend({
   model: UserModel,
 });
 
-module.exports = Users;
+export default Users;

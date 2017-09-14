@@ -1,16 +1,19 @@
-var Sync = require('../sync');
-var pageIsVisible = require('../utils').pageIsVisible;
-var pageOnVisibilityChange = require('../utils').pageOnVisibilityChange;
-var textTemplate = require('../templates/textMessage.html');
-var fileTemplate = require('../templates/fileMessage.html');
-var App = require('../app');
-var anchorme = require("anchorme").default;
-var bytes = require('bytes');
-var UserView = require('./user');
-var _str = require('../utils')._str;
-var WebRTC = require('../RTCPConnect');
+import Sync from '../sync';
+import { pageIsVisible } from '../utils';
+import { pageOnVisibilityChange } from '../utils';
+import textTemplate from '../templates/textMessage.html';
+import fileTemplate from '../templates/fileMessage.html';
+import App from '../app';
+import anchorme from "anchorme";
+import bytes from 'bytes';
+import UserView from './user';
+import { _str } from '../utils';
+import WebRTC from '../RTCPConnect';
+import '../backboneConfig';
 
-var MainView = Backbone.View.extend({
+console.log(Backbone)
+
+var MainView = Backbone.NativeView.extend({
   initialize: function(options) {
     this.title = document.title;
     this.unreadMessages = 0;
@@ -155,7 +158,7 @@ var MainView = Backbone.View.extend({
 
     switch (messageModel.get('type')) {
       case 'text':
-        message = _.template(textTemplate);
+        message = textTemplate;
         _m.innerHTML = message({
           colour: messageModel.get('colour'),
           text: anchorme(messageModel.get('data'), {
@@ -172,7 +175,7 @@ var MainView = Backbone.View.extend({
         break;
 
       case 'file':
-        message = _.template(fileTemplate);
+        message = fileTemplate;
         _m.innerHTML = message({
           colour: messageModel.get('colour'),
           url: messageModel.get('data'),
@@ -217,4 +220,4 @@ var MainView = Backbone.View.extend({
   },
 });
 
-module.exports = MainView;
+export default MainView;

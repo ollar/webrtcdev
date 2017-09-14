@@ -1,7 +1,6 @@
-const Backbone = require('backbone');
-require('backbone.nativeview');
+import Backbone from 'backbone';
+import 'backbone.nativeview';
 
 Backbone.View = Backbone.NativeView;
 
-
-module.exports = Backbone;
+Backbone.VERSION = '1.3.3_custom';

@@ -1,5 +1,5 @@
-<li class="message" style="color: <%= colour %>">
-  <a download="<%= fileDescription.name %>" href="<%= url %>">
-    Received file "<%= fileDescription.name %>" (<%= bytes(fileDescription.size) %>)
+<li class="message" style="color: <%= data.colour %>">
+  <a download="<%= data.fileDescription.name %>" href="<%= url %>">
+    Received file "<%= data.fileDescription.name %>" (<%= bytes(data.fileDescription.size) %>)
   </a>
 </li>

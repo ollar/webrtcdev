@@ -1,9 +1,9 @@
-var WebRTC = require('./RTCPConnect');
-var Sync = require('./sync');
-var _str = require('./utils')._str;
-var trace = require('./utils').trace;
-var Middleware = require('./utils').Middleware;
-var bytes = require('bytes');
+import WebRTC from './RTCPConnect';
+import Sync from './sync';
+import { _str } from './utils';
+import { trace } from './utils';
+import { Middleware } from './utils';
+import bytes from 'bytes';
 
 var App = (function(window) {
   var ws;
@@ -256,4 +256,4 @@ var App = (function(window) {
   };
 })(window);
 
-module.exports = App;
+export default App;

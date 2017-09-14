@@ -1,7 +1,7 @@
-var MessageModel = require('../models/message');
+import MessageModel from '../models/message';
 
 var HistoryCollection = Backbone.Collection.extend({
   model: MessageModel,
 });
 
-module.exports = HistoryCollection;
+export default HistoryCollection;

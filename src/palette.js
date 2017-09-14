@@ -20,4 +20,4 @@ var colours = [
   '#263238',
 ];
 
-module.exports = colours;
+export default colours;

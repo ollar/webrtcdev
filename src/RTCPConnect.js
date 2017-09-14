@@ -1,11 +1,11 @@
-var adapter = require('webrtc-adapter');
+import adapter from 'webrtc-adapter';
 
-var trace = require('./utils').trace;
-var uuid = require('./utils').uuid;
-var _str = require('./utils')._str;
-var colours = require('./palette');
+import { trace } from './utils';
+import { uuid } from './utils';
+import { _str } from './utils';
+import colours from './palette';
 
-var Sync = require('./sync');
+import Sync from './sync';
 
 var servers = {
   iceServers: [
@@ -344,4 +344,4 @@ var RTCPConnect = (function(window) {
   };
 })(window);
 
-module.exports = RTCPConnect;
+export default RTCPConnect;

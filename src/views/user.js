@@ -1,3 +1,5 @@
+import '../backboneConfig';
+
 var User = Backbone.View.extend({
   tagName: 'li',
 
@@ -13,4 +15,4 @@ var User = Backbone.View.extend({
   }
 });
 
-module.exports = User;
+export default User;

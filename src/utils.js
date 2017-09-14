@@ -1,10 +1,10 @@
 // Logging utility function.
-function trace(arg) {
+export function trace(arg) {
   var now = (window.performance.now() / 1000).toFixed(3);
   console.log(now + ': ', arg);
 }
 
-function uuid() {
+export function uuid() {
   function ko() {
     return Math.floor(Math.random() * 0x10000).toString(16);
   }
@@ -12,11 +12,11 @@ function uuid() {
   return ko() + ko() + '-' + ko() + '-' + ko() + '-' + ko();
 }
 
-function _str(obj) {
+export function _str(obj) {
   return JSON.stringify(obj);
 }
 
-function pageIsVisible() {
+export function pageIsVisible() {
   var hidden, visibilityChange;
   if (typeof document.hidden !== "undefined") { // Opera 12.10 and Firefox 18 and later support
     hidden = "hidden";
@@ -32,7 +32,7 @@ function pageIsVisible() {
   return !document[hidden];
 }
 
-function pageOnVisibilityChange() {
+export function pageOnVisibilityChange() {
   var visibilityChange;
   if (typeof document.hidden !== "undefined") { // Opera 12.10 and Firefox 18 and later support
     visibilityChange = "visibilitychange";
@@ -45,7 +45,7 @@ function pageOnVisibilityChange() {
   return visibilityChange;
 }
 
-var Middleware = function() {};
+export function Middleware() {};
 
 Middleware.prototype.use = function(func) {
   this.go = (function(_go, _this) {
@@ -58,12 +58,3 @@ Middleware.prototype.use = function(func) {
 Middleware.prototype.go = function(next) {
   return next();
 };
-
-module.exports = {
-  trace: trace,
-  uuid: uuid,
-  _str: _str,
-  pageIsVisible: pageIsVisible,
-  pageOnVisibilityChange: pageOnVisibilityChange,
-  Middleware: Middleware,
-}

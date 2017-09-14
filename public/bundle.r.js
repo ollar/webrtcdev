@@ -3614,6 +3614,14 @@ var utils_1 = {
   extractVersion: utils.extractVersion
 };
 
+/*
+ *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+ */
+ /* eslint-env node */
 'use strict';
 var logging$1 = utils_1.log;
 
@@ -3805,6 +3813,14 @@ var getusermedia = function() {
   }
 };
 
+/*
+ *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+ */
+ /* eslint-env node */
 'use strict';
 var logging = utils_1.log;
 var browserDetails = utils_1.browserDetails;
@@ -4699,6 +4715,14 @@ var getusermedia$2 = function() {
   };
 };
 
+/*
+ *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+ */
+ /* eslint-env node */
 'use strict';
 
 
@@ -5819,6 +5843,14 @@ var edge_shim = {
   shimGetUserMedia: getusermedia$2
 };
 
+/*
+ *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+ */
+ /* eslint-env node */
 'use strict';
 
 var logging$2 = utils_1.log;
@@ -5973,6 +6005,14 @@ var getusermedia$4 = function() {
   };
 };
 
+/*
+ *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+ */
+ /* eslint-env node */
 'use strict';
 
 var browserDetails$2 = utils_1.browserDetails;
@@ -7764,7 +7804,7 @@ var User = backbone.View.extend({
 
 console.log(backbone);
 
-var MainView = backbone.NativeView.extend({
+var MainView = backbone.View.extend({
   initialize: function(options) {
     this.title = document.title;
     this.unreadMessages = 0;
@@ -8011,6 +8051,8 @@ const Router = backbone.Router.extend({
     var peers = new Users$1();
     var history = new HistoryCollection();
 
+    console.log(connectionId);
+
     App.init(connectionId, peers, history);
     const mainView = new MainView({
       el: '#app',
@@ -8023,3 +8065,4 @@ const Router = backbone.Router.extend({
 
 new Router();
 backbone.history.start();
+//# sourceMappingURL=bundle.r.js.map

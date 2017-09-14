@@ -5,8 +5,6 @@ import Sync from './sync';
 import App from './app';
 import UsersCollection from './collections/users';
 import HistoryCollection from './collections/history';
-import './backboneConfig';
-
 
 const Router = Backbone.Router.extend({
   routes: {
@@ -21,6 +19,8 @@ const Router = Backbone.Router.extend({
   main: function(connectionId) {
     var peers = new UsersCollection();
     var history = new HistoryCollection();
+
+    console.log(connectionId)
 
     App.init(connectionId, peers, history);
     const mainView = new MainView({

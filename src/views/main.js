@@ -13,7 +13,7 @@ import '../backboneConfig';
 
 console.log(Backbone)
 
-var MainView = Backbone.NativeView.extend({
+var MainView = Backbone.View.extend({
   initialize: function(options) {
     this.title = document.title;
     this.unreadMessages = 0;

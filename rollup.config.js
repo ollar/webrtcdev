@@ -11,6 +11,7 @@ export default {
     format: 'cjs',
     name: 'app',
     file: 'public/bundle.r.js',
+    sourcemap: true,
   },
   plugins: [
     jst(),
@@ -22,7 +23,7 @@ export default {
     }),
     commonjs({
       include: 'node_modules/**',
-      ignore: ['jquery']
+      ignore: ['jquery'],
     }),
     inject({
         modules: {

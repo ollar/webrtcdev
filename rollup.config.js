@@ -3,6 +3,7 @@ import jst from 'rollup-plugin-jst';
 import resolve from 'rollup-plugin-node-resolve';
 import inject from 'rollup-plugin-inject';
 import replace from 'rollup-plugin-replace';
+import path from 'path';
 
 
 export default {
@@ -28,7 +29,7 @@ export default {
     inject({
         modules: {
             '_': 'underscore',
-            Backbone: 'backbone',
+            Backbone: path.resolve( 'src/backboneConfig.js'),
         },
     }),
   ]

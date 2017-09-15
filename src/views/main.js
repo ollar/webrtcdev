@@ -9,7 +9,6 @@ import bytes from 'bytes';
 import UserView from './user';
 import { _str } from '../utils';
 import WebRTC from '../RTCPConnect';
-import '../backboneConfig';
 
 console.log(Backbone)
 

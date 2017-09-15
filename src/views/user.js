@@ -1,5 +1,3 @@
-import '../backboneConfig';
-
 var User = Backbone.View.extend({
   tagName: 'li',
 

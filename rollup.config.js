@@ -3,12 +3,14 @@ import resolve from 'rollup-plugin-node-resolve';
 import inject from 'rollup-plugin-inject';
 import replace from 'rollup-plugin-replace';
 import path from 'path';
+import uglify from 'rollup-plugin-uglify';
+import { minify } from 'uglify-es';
 
 
 export default {
   input: 'src/index.js',
   output: {
-    format: 'cjs',
+    format: 'iife',
     name: 'app',
     file: 'public/bundle.r.js',
     sourcemap: true,
@@ -18,7 +20,8 @@ export default {
         jsnext: true,
     }),
     replace({
-      ENV: JSON.stringify('dev'),
+      // ENV: JSON.stringify('dev'),
+      ENV: JSON.stringify('prod'),
     }),
     commonjs({
       include: 'node_modules/**',
@@ -30,5 +33,6 @@ export default {
             Backbone: path.resolve( 'src/backboneConfig.js'),
         },
     }),
+    uglify({}, minify),
   ]
 };

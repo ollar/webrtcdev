@@ -6,7 +6,7 @@ import App from './app';
 import UsersCollection from './collections/users';
 import HistoryCollection from './collections/history';
 
-const Router = Backbone.Router.extend({
+var Router = Backbone.Router.extend({
   routes: {
     '': 'start',
     ':connectionId': 'main',
@@ -23,7 +23,7 @@ const Router = Backbone.Router.extend({
     console.log(connectionId)
 
     App.init(connectionId, peers, history);
-    const mainView = new MainView({
+    var mainView = new MainView({
       el: '#app',
       connectionId: connectionId,
       peers: peers,

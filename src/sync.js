@@ -1,3 +1,3 @@
-const Sync = _.extend({}, Backbone.Events);
+var Sync = _.extend({}, Backbone.Events);
 
 export default Sync;

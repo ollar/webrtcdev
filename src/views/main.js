@@ -1,16 +1,14 @@
 import Sync from '../sync';
 import { pageIsVisible } from '../utils';
 import { pageOnVisibilityChange } from '../utils';
-import textTemplate from '../templates/textMessage.html';
-import fileTemplate from '../templates/fileMessage.html';
+import textTemplate from '../templates/textMessage';
+import fileTemplate from '../templates/fileMessage';
 import App from '../app';
 import anchorme from "anchorme";
 import bytes from 'bytes';
 import UserView from './user';
 import { _str } from '../utils';
 import WebRTC from '../RTCPConnect';
-
-console.log(Backbone)
 
 var MainView = Backbone.View.extend({
   initialize: function(options) {

@@ -160,7 +160,8 @@ var App = (function(window) {
   }
 
   function _sliceFile(next, options) {
-    var chunkSize = 16384;
+    // var chunkSize = 16384;
+    var chunkSize = 256000;
     var reader = new window.FileReader();
     reader.onload = (function(_file) {
       return function(e) {

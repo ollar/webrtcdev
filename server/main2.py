@@ -47,10 +47,11 @@ class WS_Handler:
         print(data)
         print(self.connections)
         for key, ws in self.connections[self.path].items():
-            await ws.send(json.dumps({
-                'type': 'newUser',
-                'uid': data.get('uid'),
-            }))
+            if ws.open:
+                await ws.send(json.dumps({
+                    'type': 'newUser',
+                    'uid': data.get('uid'),
+                }))
 
         print()
         self.connections[self.path][data.get('uid')] = websocket

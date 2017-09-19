@@ -14,7 +14,8 @@ var App = (function(window) {
    */
   function init(connectionId, peers, history) {
     if (ENV === 'dev') {
-      ws = new WebSocket('ws://localhost:8765/' + connectionId);
+      // ws = new WebSocket('ws://localhost:8765/' + connectionId);
+      ws = new WebSocket('ws://localhost:8765/ws');
     } else {
       ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
     }

@@ -20,8 +20,6 @@ var Router = Backbone.Router.extend({
     var peers = new UsersCollection();
     var history = new HistoryCollection();
 
-    console.log(connectionId)
-
     App.init(connectionId, peers, history);
     var mainView = new MainView({
       el: '#app',

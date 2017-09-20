@@ -36,10 +36,13 @@ class WS_Handler:
                 logging.info('got message type: {}'.format(data['type']))
 
                 await self.dispatch_ws_types(data)(data, websocket)
-                break
 
         except websockets.exceptions.ConnectionClosed:
-            print('closed 1001')
+            ws = self._getConnection(data.get('uid', ''))
+            if ws and not ws.open:
+                del self.connections[self.path][data['uid']]
+
+            logging.info('closed 1001')
 
     def dispatch_ws_types(self, data):
         ws_types_handles_map = {
@@ -62,9 +65,7 @@ class WS_Handler:
             return await ws.send(json.dumps(data))
 
     async def _on_enter_room(self, data, websocket):
-        print(data.get('uid'))
         for key, ws in self.connections[self.path].items():
-            print(key, ws, ws.open)
             await self.sendData(key, {
                 'type': 'newUser',
                 'uid': data.get('uid'),
@@ -94,7 +95,13 @@ class WS_Handler:
         })
 
     async def _on_channel_close(self, data, *args):
-        print('_on_channel_close')
+        for key, ws in self.connections[self.path].items():
+            await self.sendData(key, {
+                'type': 'channelClose',
+                'uid': data['uid'],
+            })
+        if len(self.connections[self.path]) == 0:
+            del self.connections[self.path]
 
 
 

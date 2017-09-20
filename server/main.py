@@ -2,85 +2,113 @@ import asyncio
 import websockets
 import logging
 import json
-import uvloop
+# import uvloop
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-logging.basicConfig(level=logging.INFO)
-logging.info('server starts')
-
+# set global variables
 connections = {}
 
+logging.basicConfig(level=logging.INFO)
 
-async def RTCServer(websocket, path):
-    async def channelClose():
-        if message.get('uid') in connections[path].keys():
-            del connections[path][message['uid']]
-            for key, ws in connections[path].items():
-                await ws.send(json.dumps({
-                    'type': 'channelClose',
-                    'uid': message['uid'],
-                }))
-            if len(connections[path]) == 0:
-                del connections[path]
 
-    async def getConnection(uid):
-        return connections[path].get(uid, None)
+class WS_Handler:
+    def __init__(self):
+        self.connections = {}
+        self.path = '/'
+        logging.info('server starts')
 
-    async def sendData(uid, data):
-        connection = await getConnection(uid)
+    async def __call__(self, websocket, path):
+        # may set connections variables here
+        self.path = path
 
-        if connection:
-            return await connection.send(data)
+        if not self.connections.get(path):
+            self.connections[path] = {}
 
-    message = None
-    if not connections.get(path):
-        connections[path] = {}
-    while True:
         try:
-            message = await websocket.recv()
+            while True:
+                message = await websocket.recv()
+
+                try:
+                    data = json.loads(message)
+                except:
+                    break
+
+                logging.info('got message type: {}'.format(data['type']))
+
+                await self.dispatch_ws_types(data)(data, websocket)
+
         except websockets.exceptions.ConnectionClosed:
-            await channelClose()
-            print('ConnectionClosed')
-            return
-        message = json.loads(message)
-        # logging.info('got message {}'.format(message))
-        logging.info('got message type: {}'.format(message['type']))
+            ws = self._getConnection(data.get('uid', ''))
+            if ws and not ws.open:
+                del self.connections[self.path][data['uid']]
 
-        if message['type'] == 'enterRoom':
-            for key, ws in connections[path].items():
-                await ws.send(json.dumps({
-                    'type': 'newUser',
-                    'uid': message.get('uid'),
-                }))
+            logging.info('closed 1001')
 
-            connections[path][message.get('uid')] = websocket
+    def dispatch_ws_types(self, data):
+        ws_types_handles_map = {
+            'enterRoom': self._on_enter_room,
+            'channelClose': self._on_channel_close,
+            'offer': self._on_offer,
+            'answer': self._on_answer,
+            'iceCandidate': self._on_ice_candidate,
+        }
 
-        elif message['type'] == 'offer':
-            await sendData(message.get('toUid'), json.dumps({
-                'type': 'offerFrom',
-                'fromUid': message.get('fromUid'),
-                'offer': message.get('offer'),
-            }))
+        return ws_types_handles_map[data.get('type')]
 
-        elif message['type'] == 'answer':
-            await sendData(message.get('toUid'), json.dumps({
-                'type': 'answerFrom',
-                'fromUid': message.get('fromUid'),
-                'answer': message.get('answer'),
-            }))
+    def _getConnection(self, uid):
+        return self.connections[self.path].get(uid, None)
 
-        elif message['type'] == 'iceCandidate':
-            await sendData(message.get('toUid'), json.dumps({
-                'type': 'iceCandidateFrom',
-                'fromUid': message.get('fromUid'),
-                'iceCandidate': message.get('iceCandidate'),
-            }))
+    async def sendData(self, uid, data):
+        ws = self._getConnection(uid)
 
-        elif message['type'] == 'channelClose':
-            await channelClose()
+        if ws and ws.open:
+            return await ws.send(json.dumps(data))
 
-start_server = websockets.serve(RTCServer, '0.0.0.0', 8765)
+    async def _on_enter_room(self, data, websocket):
+        for key, ws in self.connections[self.path].items():
+            await self.sendData(key, {
+                'type': 'newUser',
+                'uid': data.get('uid'),
+            })
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+        self.connections[self.path][data.get('uid')] = websocket
+
+    async def _on_offer(self, data, *args):
+        await self.sendData(data.get('toUid'), {
+            'type': 'offerFrom',
+            'fromUid': data.get('fromUid'),
+            'offer': data.get('offer'),
+        })
+
+    async def _on_answer(self, data, *args):
+        await self.sendData(data.get('toUid'), {
+            'type': 'answerFrom',
+            'fromUid': data.get('fromUid'),
+            'answer': data.get('answer'),
+        })
+
+    async def _on_ice_candidate(self, data, *args):
+        await self.sendData(data.get('toUid'), {
+            'type': 'iceCandidateFrom',
+            'fromUid': data.get('fromUid'),
+            'iceCandidate': data.get('iceCandidate'),
+        })
+
+    async def _on_channel_close(self, data, *args):
+        for key, ws in self.connections[self.path].items():
+            await self.sendData(key, {
+                'type': 'channelClose',
+                'uid': data['uid'],
+            })
+        if len(self.connections[self.path]) == 0:
+            del self.connections[self.path]
+
+
+
+loop = asyncio.get_event_loop()
+ws_handler = WS_Handler()
+
+ws_server = websockets.serve(ws_handler, host='0.0.0.0', port=8765, loop=loop)
+future = asyncio.ensure_future(ws_server)
+
+loop.run_forever()

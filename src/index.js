@@ -1,6 +1,7 @@
 import RTCPConnect from './RTCPConnect';
 import { uuid } from './utils';
-import MainView from './views/main';
+// import MainView from './views/main';
+import MainView from './views/main2';
 import Sync from './sync';
 import App from './app';
 import UsersCollection from './collections/users';

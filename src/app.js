@@ -41,6 +41,7 @@ var App = (function(window) {
 
       switch (message.type) {
         case 'newUser':
+          console.log('new user')
           var uid = message.uid
           // someone entered room
           // we create connection with him

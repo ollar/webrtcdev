@@ -8,7 +8,8 @@ import json
 # set global variables
 connections = {}
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class WS_Handler:
@@ -106,6 +107,7 @@ class WS_Handler:
 
 
 loop = asyncio.get_event_loop()
+loop.set_debug(enabled=True)
 ws_handler = WS_Handler()
 
 ws_server = websockets.serve(ws_handler, host='0.0.0.0', port=8765, loop=loop)

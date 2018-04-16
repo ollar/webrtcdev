@@ -16,7 +16,7 @@ var App = (function(window) {
     if (ENV === 'dev') {
       ws = new WebSocket('ws://localhost:8765/' + connectionId);
     } else {
-      ws = new WebSocket('ws://188.166.36.35:8765/' + connectionId);
+      ws = new WebSocket('ws://http://206.189.15.231/:8765/' + connectionId);
     }
     WebRTC.init(connectionId, peers, history);
 
